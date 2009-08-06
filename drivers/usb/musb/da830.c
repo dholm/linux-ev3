@@ -102,8 +102,16 @@ static inline void phy_on(void)
 	 * Start the on-chip PHY and its PLL.
 	 */
 	cfgchip2 = __raw_readl(CFGCHIP2);
-	cfgchip2 &= ~(CFGCHIP2_RESET | CFGCHIP2_PHYPWRDN | CFGCHIP2_OTGPWRDN);
-	cfgchip2 |= CFGCHIP2_PHY_PLLON;
+
+	/* Check whether USB0 PHY is already powered on */
+	if (cfgchip2 & CFGCHIP2_PHY_PLLON)
+		return;
+
+	cfgchip2 &= ~(CFGCHIP2_RESET | CFGCHIP2_PHYPWRDN | CFGCHIP2_OTGPWRDN |
+			CFGCHIP2_OTGMODE | CFGCHIP2_REFFREQ);
+	cfgchip2 |= CFGCHIP2_SESENDEN | CFGCHIP2_VBDTCTEN | CFGCHIP2_PHY_PLLON |
+			CFGCHIP2_REFFREQ_24MHZ;
+
 	__raw_writel(cfgchip2, CFGCHIP2);
 
 	pr_info("Waiting for USB PHY clock good...\n");
@@ -119,6 +127,17 @@ static inline void phy_off(void)
 	 * Power down the on-chip PHY.
 	 */
 	cfgchip2 = __raw_readl(CFGCHIP2);
+
+	/* Ensure that usb1.1 interface clk is not being sourced from usb0
+	 * interface.  If so do not power down usb0 PHY
+	 */
+	if ((cfgchip2 & CFGCHIP2_USB1SUSPENDM) &&
+		!(cfgchip2 & CFGCHIP2_USB1PHYCLKMUX)) {
+		printk ( KERN_WARNING "USB1 interface active - Cannot Power down USB0 PHY\n");
+		return;
+	}
+
+	cfgchip2 &= ~CFGCHIP2_PHY_PLLON;
 	cfgchip2 |= CFGCHIP2_PHYPWRDN | CFGCHIP2_OTGPWRDN;
 	__raw_writel(cfgchip2, CFGCHIP2);
 }
@@ -480,6 +499,13 @@ int __init musb_platform_init(struct musb *musb)
 
 	/* Start the on-chip PHY and its PLL. */
 	phy_on();
+
+	if (is_otg_enabled(musb))
+		musb_platform_set_mode(musb, MUSB_OTG);
+	else if (is_host_enabled(musb))
+		musb_platform_set_mode(musb, MUSB_HOST);
+	else
+		musb_platform_set_mode(musb, MUSB_PERIPHERAL);
 
 	msleep(5);
 
