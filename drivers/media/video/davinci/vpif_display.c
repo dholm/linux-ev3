@@ -95,46 +95,6 @@ static const struct vpif_channel_config_params ch_params[] = {
 };
 
 /*
- * vpif_uservirt_to_phys: This function is used to convert user
- * space virtual address to physical address.
- */
-static u32 vpif_uservirt_to_phys(u32 virtp)
-{
-	struct mm_struct *mm = current->mm;
-	unsigned long physp = 0;
-	struct vm_area_struct *vma;
-
-	vma = find_vma(mm, virtp);
-
-	/* For kernel direct-mapped memory, take the easy way */
-	if (virtp >= PAGE_OFFSET) {
-		physp = virt_to_phys((void *)virtp);
-	} else if (vma && (vma->vm_flags & VM_IO) && (vma->vm_pgoff)) {
-		/* this will catch, kernel-allocated, mmaped-to-usermode addr */
-		physp = (vma->vm_pgoff << PAGE_SHIFT) + (virtp - vma->vm_start);
-	} else {
-		/* otherwise, use get_user_pages() for general userland pages */
-		int res, nr_pages = 1;
-		struct page *pages;
-		down_read(&current->mm->mmap_sem);
-
-		res = get_user_pages(current, current->mm,
-				     virtp, nr_pages, 1, 0, &pages, NULL);
-		up_read(&current->mm->mmap_sem);
-
-		if (res == nr_pages) {
-			physp = __pa(page_address(&pages[0]) +
-							(virtp & ~PAGE_MASK));
-		} else {
-			vpif_err("get_user_pages failed\n");
-			return 0;
-		}
-	}
-
-	return physp;
-}
-
-/*
  * buffer_prepare: This is the callback function called from videobuf_qbuf()
  * function the buffer is prepared and user space virtual address is converted
  * into physical address
@@ -146,6 +106,7 @@ static int vpif_buffer_prepare(struct videobuf_queue *q,
 	struct vpif_fh *fh = q->priv_data;
 	struct common_obj *common;
 	unsigned long addr;
+	int ret;
 
 	common = &fh->channel->common[VPIF_VIDEO_INDEX];
 	if (VIDEOBUF_NEEDS_INIT == vb->state) {
@@ -153,29 +114,21 @@ static int vpif_buffer_prepare(struct videobuf_queue *q,
 		vb->height	= common->height;
 		vb->size	= vb->width * vb->height;
 		vb->field	= field;
-	}
-	vb->state = VIDEOBUF_PREPARED;
 
-	/* if user pointer memory mechanism is used, get the physical
-	 * address of the buffer */
-	if (V4L2_MEMORY_USERPTR == common->memory) {
-		if (!vb->baddr) {
-			vpif_err("buffer_address is 0\n");
-			return -EINVAL;
+		ret = videobuf_iolock(q, vb, NULL);
+		if (ret < 0)
+			goto buf_align_exit;
+
+		addr = videobuf_to_dma_contig(vb);
+		if (q->streaming &&
+			(V4L2_BUF_TYPE_SLICED_VBI_OUTPUT != q->type)) {
+			if (!ISALIGNED(addr + common->ytop_off) ||
+			    !ISALIGNED(addr + common->ybtm_off) ||
+			    !ISALIGNED(addr + common->ctop_off) ||
+			    !ISALIGNED(addr + common->cbtm_off))
+				goto buf_align_exit;
 		}
-
-		vb->boff = vpif_uservirt_to_phys(vb->baddr);
-		if (!ISALIGNED(vb->boff))
-			goto buf_align_exit;
-	}
-
-	addr = vb->boff;
-	if (q->streaming && (V4L2_BUF_TYPE_SLICED_VBI_OUTPUT != q->type)) {
-		if (!ISALIGNED(addr + common->ytop_off) ||
-		    !ISALIGNED(addr + common->ybtm_off) ||
-		    !ISALIGNED(addr + common->ctop_off) ||
-		    !ISALIGNED(addr + common->cbtm_off))
-			goto buf_align_exit;
+		vb->state = VIDEOBUF_PREPARED;
 	}
 	return 0;
 
@@ -234,7 +187,9 @@ static void vpif_buffer_release(struct videobuf_queue *q,
 
 	common = &ch->common[VPIF_VIDEO_INDEX];
 
-	videobuf_dma_contig_free(q, vb);
+	if (V4L2_MEMORY_USERPTR != vb->memory)
+		videobuf_dma_contig_free(q, vb);
+
 	vb->state = VIDEOBUF_NEEDS_INIT;
 
 	if (V4L2_MEMORY_MMAP != common->memory)
@@ -727,6 +682,7 @@ static int vpif_g_fmt_vid_out(struct file *file, void *priv,
 
 	if (vpif_get_std_info(ch)) {
 		vpif_err("Error getting the standard info\n");
+		mutex_unlock(&common->lock);
 		return -EINVAL;
 	}
 
@@ -828,7 +784,8 @@ static int vpif_reqbufs(struct file *file, void *priv,
 	if (mutex_lock_interruptible(&common->lock))
 		return -ERESTARTSYS;
 
-	if (common->fmt.type != reqbuf->type) {
+	if ((common->fmt.type != reqbuf->type) ||
+	    (NULL == vpif_dev)) {
 		ret = -EINVAL;
 		goto reqbuf_exit;
 	}
@@ -849,7 +806,7 @@ static int vpif_reqbufs(struct file *file, void *priv,
 
 	/* Initialize videobuf queue as per the buffer type */
 	videobuf_queue_dma_contig_init(&common->buffer_queue,
-					    &video_qops, NULL,
+					    &video_qops, vpif_dev,
 					    &common->irqlock,
 					    reqbuf->type, field,
 					    sizeof(struct videobuf_buffer), fh);
@@ -886,16 +843,22 @@ static int vpif_querybuf(struct file *file, void *priv,
 static int vpif_qbuf(struct file *file, void *priv, struct v4l2_buffer *buf)
 {
 
-	struct vpif_fh *fh = priv;
-	struct channel_obj *ch = fh->channel;
-	struct common_obj *common = &ch->common[VPIF_VIDEO_INDEX];
-	struct v4l2_buffer tbuf = *buf;
-	struct videobuf_buffer *buf1;
-	unsigned long addr = 0;
-	unsigned long flags;
-	int ret = 0;
+	struct vpif_fh *fh = NULL;
+	struct channel_obj *ch = NULL;
+	struct common_obj *common = NULL;
 
-	if (common->fmt.type != tbuf.type)
+	if ((NULL == buf) || (NULL == priv))
+		return -EINVAL;
+
+	fh = priv;
+	ch = fh->channel;
+
+	if (NULL == ch)
+		return -EINVAL;
+
+	common = &(ch->common[VPIF_VIDEO_INDEX]);
+
+	if (common->fmt.type != buf->type)
 		return -EINVAL;
 
 	if (!fh->io_allowed[VPIF_VIDEO_INDEX]) {
@@ -903,72 +866,7 @@ static int vpif_qbuf(struct file *file, void *priv, struct v4l2_buffer *buf)
 		return -EACCES;
 	}
 
-	if (!(list_empty(&common->dma_queue)) ||
-	    (common->cur_frm != common->next_frm) ||
-	    !(common->started) ||
-	    (common->started && (0 == ch->field_id)))
-		return videobuf_qbuf(&common->buffer_queue, buf);
-
-	/* bufferqueue is empty store buffer address in VPIF registers */
-	mutex_lock(&common->buffer_queue.vb_lock);
-	buf1 = common->buffer_queue.bufs[tbuf.index];
-	if (buf1->memory != tbuf.memory) {
-		vpif_err("invalid buffer type\n");
-		goto qbuf_exit;
-	}
-
-	if ((buf1->state == VIDEOBUF_QUEUED) ||
-	    (buf1->state == VIDEOBUF_ACTIVE)) {
-		vpif_err("invalid state\n");
-		goto qbuf_exit;
-	}
-
-	switch (buf1->memory) {
-	case V4L2_MEMORY_MMAP:
-		if (buf1->baddr == 0)
-			goto qbuf_exit;
-		break;
-
-	case V4L2_MEMORY_USERPTR:
-		if (tbuf.length < buf1->bsize)
-			goto qbuf_exit;
-
-		if ((VIDEOBUF_NEEDS_INIT != buf1->state)
-			    && (buf1->baddr != tbuf.m.userptr))
-			vpif_buffer_release(&common->buffer_queue, buf1);
-			buf1->baddr = tbuf.m.userptr;
-		break;
-
-	default:
-		goto qbuf_exit;
-	}
-
-	local_irq_save(flags);
-	ret = vpif_buffer_prepare(&common->buffer_queue, buf1,
-					common->buffer_queue.field);
-	if (ret < 0) {
-		local_irq_restore(flags);
-		goto qbuf_exit;
-	}
-
-	buf1->state = VIDEOBUF_ACTIVE;
-	addr = buf1->boff;
-	common->next_frm = buf1;
-	if (tbuf.type != V4L2_BUF_TYPE_SLICED_VBI_OUTPUT) {
-		common->set_addr((addr + common->ytop_off),
-				 (addr + common->ybtm_off),
-				 (addr + common->ctop_off),
-				 (addr + common->cbtm_off));
-	}
-
-	local_irq_restore(flags);
-	list_add_tail(&buf1->stream, &common->buffer_queue.stream);
-	mutex_unlock(&common->buffer_queue.vb_lock);
-	return 0;
-
-qbuf_exit:
-	mutex_unlock(&common->buffer_queue.vb_lock);
-	return -EINVAL;
+	return videobuf_qbuf(&common->buffer_queue, buf);
 }
 
 static int vpif_s_std(struct file *file, void *priv, v4l2_std_id *std_id)
@@ -977,6 +875,7 @@ static int vpif_s_std(struct file *file, void *priv, v4l2_std_id *std_id)
 	struct channel_obj *ch = fh->channel;
 	struct common_obj *common = &ch->common[VPIF_VIDEO_INDEX];
 	int ret = 0;
+	struct v4l2_subdev *sd = NULL;
 
 	if (!(*std_id & DM646X_V4L2_STD))
 		return -EINVAL;
@@ -994,32 +893,47 @@ static int vpif_s_std(struct file *file, void *priv, v4l2_std_id *std_id)
 	/* Get the information about the standard */
 	if (vpif_get_std_info(ch)) {
 		vpif_err("Error getting the standard info\n");
+		mutex_unlock(&common->lock);
 		return -EINVAL;
 	}
 
 	if ((ch->vpifparams.std_info.width *
-		ch->vpifparams.std_info.height * 2) >
-		config_params.channel_bufsize[ch->channel_id]) {
+				ch->vpifparams.std_info.height * 2) >
+			config_params.channel_bufsize[ch->channel_id]) {
 		vpif_err("invalid std for this size\n");
 		ret = -EINVAL;
 		goto s_std_exit;
 	}
 
-	common->fmt.fmt.pix.bytesperline = common->fmt.fmt.pix.width;
-	/* Configure the default format information */
-	vpif_config_format(ch);
-
-	ret = v4l2_device_call_until_err(&vpif_obj.v4l2_dev, 1, video,
-						s_std_output, *std_id);
+	vpif_dbg(1, debug, "Setting Video Ops\n");
+	list_for_each_entry(sd, &(&(vpif_obj.v4l2_dev))->subdevs, list) {
+		vpif_dbg(1, debug, "SubDev Name %s\n", sd->name);
+		if (sd->ops->video && sd->ops->video->s_std_output)
+			ret = sd->ops->video->s_std_output(sd , *std_id);
+		if (ret && ret != -ENOIOCTLCMD)
+			break;
+	}
 	if (ret < 0) {
 		vpif_err("Failed to set output standard\n");
 		goto s_std_exit;
 	}
 
-	ret = v4l2_device_call_until_err(&vpif_obj.v4l2_dev, 1, core,
-							s_std, *std_id);
-	if (ret < 0)
+	vpif_dbg(1, debug, "Setting Core Ops\n");
+	list_for_each_entry(sd, &(&(vpif_obj.v4l2_dev))->subdevs, list) {
+		vpif_dbg(1, debug, "SubDev Name %s\n", sd->name);
+		if (sd->ops->core && sd->ops->core->s_std)
+			ret = sd->ops->core->s_std(sd , *std_id);
+		if (ret && ret != -ENOIOCTLCMD)
+			break;
+	}
+
+	if (ret < 0) {
 		vpif_err("Failed to set standard for sub devices\n");
+	} else {
+		common->fmt.fmt.pix.bytesperline = common->fmt.fmt.pix.width;
+		/* Configure the default format information */
+		vpif_config_format(ch);
+	}
 
 s_std_exit:
 	mutex_unlock(&common->lock);
@@ -1117,7 +1031,7 @@ static int vpif_streamon(struct file *file, void *priv,
 	ch->field_id = 0;
 	common->started = 1;
 	if (buftype == V4L2_BUF_TYPE_VIDEO_OUTPUT) {
-		addr = common->cur_frm->boff;
+		addr = videobuf_to_dma_contig(common->cur_frm);
 		/* Calculate the offset for Y and C data  in the buffer */
 		vpif_calculate_offsets(ch);
 
@@ -1161,7 +1075,7 @@ static int vpif_streamon(struct file *file, void *priv,
 		}
 
 		if ((VPIF_CHANNEL3_VIDEO == ch->channel_id)
-			|| (common->started == 2)) {
+			|| (0 == ch->vpifparams.std_info.ycmux_mode)) {
 			channel3_intr_assert();
 			channel3_intr_enable(1);
 			enable_channel3(1);
@@ -1259,6 +1173,7 @@ static int vpif_s_output(struct file *file, void *priv, unsigned int i)
 	struct channel_obj *ch = fh->channel;
 	struct video_obj *vid_ch = &ch->video;
 	struct common_obj *common = &ch->common[VPIF_VIDEO_INDEX];
+	struct v4l2_subdev *sd = NULL;
 	int ret = 0;
 
 	if (mutex_lock_interruptible(&common->lock))
@@ -1270,8 +1185,13 @@ static int vpif_s_output(struct file *file, void *priv, unsigned int i)
 		goto s_output_exit;
 	}
 
-	ret = v4l2_device_call_until_err(&vpif_obj.v4l2_dev, 1, video,
-							s_routing, 0, i, 0);
+	list_for_each_entry(sd, &(&(vpif_obj.v4l2_dev))->subdevs, list) {
+		vpif_dbg(1, debug, "SubDev Name %s\n", sd->name);
+		if (sd->ops->video && sd->ops->video->s_routing)
+			ret = sd->ops->video->s_routing(sd , 0, i, 0);
+		if (ret && ret != -ENOIOCTLCMD)
+			break;
+	}
 
 	if (ret < 0)
 		vpif_err("Failed to set output standard\n");
@@ -1423,7 +1343,7 @@ static __init int vpif_probe(struct platform_device *pdev)
 {
 	struct vpif_subdev_info *subdevdata;
 	struct vpif_display_config *config;
-	int i, j = 0, k, q, m, err = 0;
+	int i, j = 0, k, q, err = 0, res_end;
 	struct i2c_adapter *i2c_adap;
 	struct common_obj *common;
 	struct channel_obj *ch;
@@ -1448,16 +1368,19 @@ static __init int vpif_probe(struct platform_device *pdev)
 
 	k = 0;
 	while ((res = platform_get_resource(pdev, IORESOURCE_IRQ, k))) {
-		for (i = res->start; i <= res->end; i++) {
-			if (request_irq(i, vpif_channel_isr, IRQF_DISABLED,
+		/* Since the irq is single there is no need to
+		   run a for loop */
+		if (request_irq(res->start, vpif_channel_isr, IRQF_DISABLED,
 					"DM646x_Display",
 				(void *)(&vpif_obj.dev[k]->channel_id))) {
-				err = -EBUSY;
-				goto vpif_int_err;
-			}
+			err = -EBUSY;
+			res_end = k;
+			goto vpif_int_err;
 		}
+
 		k++;
 	}
+	res_end = k;
 
 	for (i = 0; i < VPIF_DISPLAY_MAX_DEVICES; i++) {
 
@@ -1555,6 +1478,7 @@ static __init int vpif_probe(struct platform_device *pdev)
 						NULL);
 		if (!vpif_obj.sd[i]) {
 			vpif_err("Error registering v4l2 subdevice\n");
+			err = -ENODEV;
 			goto probe_subdev_out;
 		}
 
@@ -1570,17 +1494,19 @@ probe_out:
 	for (k = 0; k < j; k++) {
 		ch = vpif_obj.dev[k];
 		video_unregister_device(ch->video_dev);
-		video_device_release(ch->video_dev);
+		if (ch->video_dev->minor == -1)
+			video_device_release(ch->video_dev);
 		ch->video_dev = NULL;
 	}
 vpif_int_err:
 	v4l2_device_unregister(&vpif_obj.v4l2_dev);
 	vpif_err("VPIF IRQ request failed\n");
-	for (q = k; k >= 0; k--) {
-		for (m = i; m >= res->start; m--)
-			free_irq(m, (void *)(&vpif_obj.dev[k]->channel_id));
-		res = platform_get_resource(pdev, IORESOURCE_IRQ, k-1);
-		m = res->end;
+	for (q = 0; q < res_end; q++) {
+		res = platform_get_resource(pdev, IORESOURCE_IRQ, q);
+		if (NULL != res) {
+			free_irq(res->start,
+					(void *)(&vpif_obj.dev[q]->channel_id));
+		}
 	}
 
 	return err;
