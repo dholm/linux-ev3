@@ -100,5 +100,14 @@ struct lcd_sync_arg {
 #define FBIPUT_HSYNC		_IOW('F', 9, int)
 #define FBIPUT_VSYNC		_IOW('F', 10, int)
 
+struct da8xx_clcd_platform_data {
+	u8 version;
+};
+
+enum {
+	CONFIG_SPACE_0 = 0,     /* DA830 */
+	CONFIG_SPACE_1,         /* DA850 */
+};
+
 #endif  /* ifndef DA8XX_FB_H */
 
