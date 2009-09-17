@@ -275,7 +275,8 @@ static void vpif_buffer_release(struct videobuf_queue *q,
 
 	common = &ch->common[VPIF_VIDEO_INDEX];
 
-	videobuf_dma_contig_free(q, vb);
+	if (common->memory == V4L2_MEMORY_MMAP)
+		videobuf_dma_contig_free(q, vb);
 	vb->state = VIDEOBUF_NEEDS_INIT;
 }
 
@@ -924,7 +925,7 @@ static int vpif_reqbufs(struct file *file, void *priv,
 
 	/* Initialize videobuf queue as per the buffer type */
 	videobuf_queue_dma_contig_init(&common->buffer_queue,
-					    &video_qops, NULL,
+					    &video_qops, vpif_dev,
 					    &common->irqlock,
 					    reqbuf->type,
 					    common->fmt.fmt.pix.field,
