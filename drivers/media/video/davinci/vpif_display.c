@@ -445,7 +445,7 @@ static void vpif_config_format(struct channel_obj *ch)
 
 	common->fmt.fmt.pix.sizeimage =
 			config_params.channel_bufsize[ch->channel_id];
-	common->fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUV422P;
+	common->fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_NV16;
 	common->fmt.type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
 }
 
@@ -456,7 +456,7 @@ static int vpif_check_format(struct channel_obj *ch,
 	enum v4l2_field field = pixfmt->field;
 	u32 sizeimage, hpitch, vpitch;
 
-	if (pixfmt->pixelformat != V4L2_PIX_FMT_YUV422P)
+	if (pixfmt->pixelformat != V4L2_PIX_FMT_NV16)
 		goto invalid_fmt_exit;
 
 	if (!(VPIF_VALID_FIELD(field)))
@@ -660,7 +660,7 @@ static int vpif_enum_fmt_vid_out(struct file *file, void  *priv,
 	/* Fill in the information about format */
 	fmt->type = V4L2_BUF_TYPE_VIDEO_OUTPUT;
 	strcpy(fmt->description, "YCbCr4:2:2 YC Planar");
-	fmt->pixelformat = V4L2_PIX_FMT_YUV422P;
+	fmt->pixelformat = V4L2_PIX_FMT_NV16;
 
 	return 0;
 }
