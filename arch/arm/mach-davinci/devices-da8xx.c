@@ -652,3 +652,109 @@ int __init da8xx_register_cpuidle(void)
 
 	return platform_device_register(&da8xx_cpuidle_device);
 }
+
+static struct resource da850_mcbsp0_resources[] = {
+	{
+		.start	= 0x01D10000,
+		.end	= 0x01D10FFF,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.start	= 0x01F10000,
+		.end	= 0x01F10FFF,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.start	= IRQ_DA850_MCBSP0RINT,
+		.end	= IRQ_DA850_MCBSP0RINT,
+		.flags	= IORESOURCE_IRQ,
+	},
+	{
+		.start	= IRQ_DA850_MCBSP0XINT,
+		.end	= IRQ_DA850_MCBSP0XINT,
+		.flags	= IORESOURCE_IRQ,
+	},
+	/* first RX, then TX */
+	{
+		.start	= 2,
+		.end	= 2,
+		.flags	= IORESOURCE_DMA,
+	},
+	{
+		.start	= 3,
+		.end	= 3,
+		.flags	= IORESOURCE_DMA,
+	},
+};
+
+static struct resource da850_mcbsp1_resources[] = {
+	{
+		.start	= 0x01D11000,
+		.end	= 0x01D11FFF,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.start	= 0x01F11000,
+		.end	= 0x01F11FFF,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.start	= IRQ_DA850_MCBSP1RINT,
+		.end	= IRQ_DA850_MCBSP1RINT,
+		.flags	= IORESOURCE_IRQ,
+	},
+	{
+		.start	= IRQ_DA850_MCBSP1XINT,
+		.end	= IRQ_DA850_MCBSP1XINT,
+		.flags	= IORESOURCE_IRQ,
+	},
+	{
+		.start	= 4,
+		.end	= 4,
+		.flags	= IORESOURCE_DMA,
+	},
+	{
+		.start	= 5,
+		.end	= 5,
+		.flags	= IORESOURCE_DMA,
+	},
+};
+static struct platform_device da850_mcbsp0_device = {
+	.name		= "davinci-mcbsp",
+	.id		= 0,
+	.num_resources	= ARRAY_SIZE(da850_mcbsp0_resources),
+	.resource	= da850_mcbsp0_resources,
+};
+
+static struct platform_device da850_mcbsp1_device = {
+	.name		= "davinci-mcbsp",
+	.id		= 1,
+	.num_resources	= ARRAY_SIZE(da850_mcbsp1_resources),
+	.resource	= da850_mcbsp1_resources,
+};
+
+int
+__init da850_init_mcbsp(struct davinci_mcbsp_platform_data *pdata)
+{
+	struct platform_device *pdev;
+	int ret;
+
+	if (!pdata->inst) {
+		ret = da8xx_pinmux_setup(da850_mcbsp0_pins);
+		pdev = &da850_mcbsp0_device;
+	} else if (pdata->inst == 1) {
+		ret = da8xx_pinmux_setup(da850_mcbsp1_pins);
+		pdev = &da850_mcbsp1_device;
+	} else {
+		printk(KERN_ERR "Cannot initialize McBSP device, Invalid id\n");
+		return -EINVAL;
+	}
+
+	if (ret)
+		pr_warning("da850_evm_init: mcbsp%d mux setup failed: %d\n",
+				pdata->inst, ret);
+
+	pdev->dev.platform_data = pdata;
+	return platform_device_register(pdev);
+}
+
