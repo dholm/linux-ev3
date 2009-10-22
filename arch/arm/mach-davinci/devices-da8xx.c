@@ -523,6 +523,9 @@ static struct platform_device da8xx_lcdc_device = {
 int __init da8xx_register_lcdc(struct da8xx_lcdc_platform_data *pdata)
 {
 #if !defined(CONFIG_FB_DA8XX) && !defined(CONFIG_FB_DA8XX_MODULE)
+	if (cpu_is_davinci_da830())
+		da8xx_evm_clcd_pdata.version = CONFIG_SPACE_0;
+
 	da8xx_lcdc_device.dev.platform_data = &da8xx_evm_clcd_pdata;
 #else
 	da8xx_lcdc_device.dev.platform_data = pdata;
