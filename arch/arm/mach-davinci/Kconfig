@@ -217,6 +217,24 @@ config DAVINCI_RESET_CLOCKS
 	  probably do not want this option enabled until your
 	  device drivers work properly.
 
+config DAVINCI_MCBSP
+	bool "DaVinci McBSP (serial API) support"
+	depends on ARCH_DAVINCI
+	default n
+	help
+	  Say Y if you want to use McBSP on DaVinci platforns as a
+	  serial interface instead of using it as an audio interface.
+
+config DAVINCI_MCBSP0
+	bool "Support for McBSP instance 0"
+	depends on DAVINCI_MCBSP
+	default n
+
+config DAVINCI_MCBSP1
+	bool "Support for McBSP instance 1"
+	depends on DAVINCI_MCBSP
+	default n
+
 endmenu
 
 endif

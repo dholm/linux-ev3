@@ -35,3 +35,6 @@ obj-$(CONFIG_MACH_DAVINCI_DA850_EVM)	+= board-da850-evm.o
 obj-$(CONFIG_CPU_FREQ)			+= cpufreq.o
 obj-$(CONFIG_CPU_IDLE)			+= cpuidle.o
 obj-$(CONFIG_SUSPEND)			+= pm.o sleep.o
+
+# DA850/OMAP-L138 McBSP driver
+obj-$(CONFIG_DAVINCI_MCBSP)		+= mcbsp.o
