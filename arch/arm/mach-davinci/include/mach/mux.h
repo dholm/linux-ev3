@@ -901,6 +901,7 @@ enum davinci_da850_index {
 	DA850_GPIO4_0,
 	DA850_GPIO4_1,
 	DA850_RTC_ALARM,
+	DA850_GPIO7_4,
 };
 
 #ifdef CONFIG_DAVINCI_MUX
