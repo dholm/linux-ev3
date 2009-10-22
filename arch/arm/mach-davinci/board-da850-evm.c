@@ -235,6 +235,17 @@ static inline void da850_evm_setup_emac_rmii(int rmii_sel)
 static inline void da850_evm_setup_emac_rmii(int rmii_sel) { }
 #endif
 
+#ifdef CONFIG_DA850_UI_CLCD
+static inline void da850_evm_setup_char_lcd(int a, int b, int c)
+{
+	gpio_set_value(a, 0);
+	gpio_set_value(b, 0);
+	gpio_set_value(c, 0);
+}
+#else
+static inline void da850_evm_setup_char_lcd(int a, int b, int c) { }
+#endif
+
 static int da850_evm_ui_expander_setup(struct i2c_client *client, unsigned gpio,
 						unsigned ngpio, void *c)
 {
@@ -273,6 +284,8 @@ static int da850_evm_ui_expander_setup(struct i2c_client *client, unsigned gpio,
 	da850_evm_setup_nor_nand();
 
 	da850_evm_setup_emac_rmii(sel_a);
+
+	da850_evm_setup_char_lcd(sel_a, sel_b, sel_c);
 
 	return 0;
 

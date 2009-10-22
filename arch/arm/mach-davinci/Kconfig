@@ -169,6 +169,15 @@ config DA850_UI_RMII
 	  NOTE: Please take care while choosing this option, MII PHY will
 	  not be functional if RMII mode is selected.
 
+config DA850_UI_CLCD
+	bool "Character LCD"
+	help
+	  Say Y if you want to use Character LCD on the DA850/OMAP-L138 EVM.
+	  The Character LCD is found on the UI daughter card that is supplied
+	  with the EVM.
+	  NOTE: Please take care while choosing this option, Graphical LCD will
+	  not be functional if Character LCD is selected.
+
 endchoice
 
 config DAVINCI_MUX

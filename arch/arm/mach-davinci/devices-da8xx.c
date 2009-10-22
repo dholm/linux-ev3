@@ -494,6 +494,12 @@ struct da8xx_lcdc_platform_data sharp_lk043t1dg01_pdata = {
 	.type			= "Sharp_LK043T1DG01",
 };
 
+#if !defined(CONFIG_FB_DA8XX) && !defined(CONFIG_FB_DA8XX_MODULE)
+static struct da8xx_clcd_platform_data da8xx_evm_clcd_pdata = {
+	.version = CONFIG_SPACE_1,
+};
+#endif
+
 static struct resource da8xx_lcdc_resources[] = {
 	[0] = { /* registers */
 		.start  = DA8XX_LCD_CNTRL_BASE,
@@ -516,7 +522,11 @@ static struct platform_device da8xx_lcdc_device = {
 
 int __init da8xx_register_lcdc(struct da8xx_lcdc_platform_data *pdata)
 {
+#if !defined(CONFIG_FB_DA8XX) && !defined(CONFIG_FB_DA8XX_MODULE)
+	da8xx_lcdc_device.dev.platform_data = &da8xx_evm_clcd_pdata;
+#else
 	da8xx_lcdc_device.dev.platform_data = pdata;
+#endif
 	return platform_device_register(&da8xx_lcdc_device);
 }
 
