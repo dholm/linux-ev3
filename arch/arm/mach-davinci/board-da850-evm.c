@@ -652,7 +652,8 @@ device_initcall(da850_evm_config_emac);
 #define HAS_EMAC 0
 #endif
 
-#if defined(CONFIG_SND_DA850_SOC_EVM)
+#if defined(CONFIG_SND_DA850_SOC_EVM) || \
+	defined(CONFIG_SND_DA850_SOC_EVM_MODULE)
 #define HAS_MCASP 1
 #else
 #define HAS_MCASP 0
