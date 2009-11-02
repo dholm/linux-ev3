@@ -732,6 +732,11 @@ static __init void da850_evm_init(void)
 				"enabled, but they share pins.\n"
 				"\tDisable one of them.\n");
 
+		ret = da8xx_pinmux_setup(da850_mcbsp0_pins);
+		if (ret)
+			pr_warning("da850_evm_init: mcbsp0 mux setup failed:"
+					" %d\n", ret);
+
 		ret = da850_init_mcbsp(&da850_mcbsp0_config);
 		if (ret)
 			pr_warning("da850_evm_init: mcbsp0 registration"
@@ -739,6 +744,11 @@ static __init void da850_evm_init(void)
 	}
 
 	if (HAS_MCBSP1) {
+		ret = da8xx_pinmux_setup(da850_mcbsp1_pins);
+		if (ret)
+			pr_warning("da850_evm_init: mcbsp1 mux setup failed:"
+					" %d\n", ret);
+
 		ret = da850_init_mcbsp(&da850_mcbsp1_config);
 		if (ret)
 			pr_warning("da850_evm_init: mcbsp1 registration"

@@ -737,22 +737,15 @@ int
 __init da850_init_mcbsp(struct davinci_mcbsp_platform_data *pdata)
 {
 	struct platform_device *pdev;
-	int ret;
 
 	if (!pdata->inst) {
-		ret = da8xx_pinmux_setup(da850_mcbsp0_pins);
 		pdev = &da850_mcbsp0_device;
 	} else if (pdata->inst == 1) {
-		ret = da8xx_pinmux_setup(da850_mcbsp1_pins);
 		pdev = &da850_mcbsp1_device;
 	} else {
 		printk(KERN_ERR "Cannot initialize McBSP device, Invalid id\n");
 		return -EINVAL;
 	}
-
-	if (ret)
-		pr_warning("da850_evm_init: mcbsp%d mux setup failed: %d\n",
-				pdata->inst, ret);
 
 	pdev->dev.platform_data = pdata;
 	return platform_device_register(pdev);
