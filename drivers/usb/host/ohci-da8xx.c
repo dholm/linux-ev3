@@ -354,6 +354,9 @@ static int usb_hcd_da8xx_probe(const struct hc_driver *driver,
 			return 0;
 	}
 
+	platform_set_drvdata (pdev, hcd);
+	return 0;
+
 	usb_remove_hcd(hcd);
 err4:
 	iounmap(hcd->regs);
