@@ -37,8 +37,6 @@ static void ohci_da8xx_clock(int on)
 
 	cfgchip2 = __raw_readl(CFGCHIP2);
 	if (on) {
-		clk_enable(usb11_clk);
-
 		/*
 		 * If USB 1.1 reference clock is sourced from USB 2.0 PHY, we
 		 * need to enable the USB 2.0 module clocking, start its PHY,
@@ -47,17 +45,22 @@ static void ohci_da8xx_clock(int on)
 		if (!(cfgchip2 & CFGCHIP2_USB1PHYCLKMUX)) {
 			clk_enable(usb20_clk);
 
-			cfgchip2 &= ~(CFGCHIP2_RESET | CFGCHIP2_PHYPWRDN);
-			cfgchip2 |= CFGCHIP2_PHY_PLLON;
-			__raw_writel(cfgchip2, CFGCHIP2);
+			if (!(cfgchip2 & CFGCHIP2_PHY_PLLON)) {
+				cfgchip2 &= ~(CFGCHIP2_RESET |
+						CFGCHIP2_PHYPWRDN);
+				cfgchip2 |= CFGCHIP2_PHY_PLLON;
+				__raw_writel(cfgchip2, CFGCHIP2);
 
-			pr_info("Waiting for USB PHY clock good...\n");
-			while (!(__raw_readl(CFGCHIP2) & CFGCHIP2_PHYCLKGD))
+				pr_info("Waiting for USB PHY clock good...\n");
+				while (!(__raw_readl(CFGCHIP2) &
+					CFGCHIP2_PHYCLKGD))
 				cpu_relax();
+			}
 		}
 
 		/* Enable USB 1.1 PHY */
 		cfgchip2 |= CFGCHIP2_USB1SUSPENDM;
+		clk_enable(usb11_clk);
 	} else {
 		clk_disable(usb11_clk);
 		if (!(cfgchip2 & CFGCHIP2_USB1PHYCLKMUX))
