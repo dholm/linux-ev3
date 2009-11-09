@@ -534,6 +534,7 @@ struct ata_host {
 	acpi_handle		acpi_handle;
 #endif
 	struct ata_port		*simplex_claimed;	/* channel owning the DMA */
+	struct clk		*clock;
 	struct ata_port		*ports[0];
 };
 
@@ -1049,6 +1050,11 @@ extern void ata_timing_merge(const struct ata_timing *,
 			     const struct ata_timing *, struct ata_timing *,
 			     unsigned int);
 extern u8 ata_timing_cycle2mode(unsigned int xfer_shift, int cycle);
+
+#ifndef CONFIG_PCI
+void ata_plat_init(void __iomem *base);
+void ata_plat_remove(struct ata_host *host);
+#endif
 
 /* PCI */
 #ifdef CONFIG_PCI
