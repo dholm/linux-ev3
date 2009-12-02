@@ -129,6 +129,36 @@ static const s16 da830_dma_rsv_slots[][2] = {
 	{-1, -1}
 };
 
+static const s16 da850_dma0_rsv_chans[][2] = {
+	/* (offset, number) */
+	{ 8,  6},
+	{24,  4},
+	{30,  2},
+	{-1, -1}
+};
+
+static const s16 da850_dma0_rsv_slots[][2] = {
+	/* (offset, number) */
+	{ 8,  6},
+	{24,  4},
+	{30, 50},
+	{-1, -1}
+};
+
+static const s16 da850_dma1_rsv_chans[][2] = {
+	/* (offset, number) */
+	{ 0, 28},
+	{30,  2},
+	{-1, -1}
+};
+
+static const s16 da850_dma1_rsv_slots[][2] = {
+	/* (offset, number) */
+	{ 0, 28},
+	{30, 90},
+	{-1, -1}
+};
+
 static struct edma_soc_info da830_edma_info[] = {
 	{
 		.n_channel		= 32,
@@ -150,6 +180,8 @@ static struct edma_soc_info da850_edma_info[] = {
 		.n_slot			= 128,
 		.n_tc			= 2,
 		.n_cc			= 1,
+		.rsv_chans		= da850_dma0_rsv_chans,
+		.rsv_slots		= da850_dma0_rsv_slots,
 		.queue_tc_mapping	= da8xx_queue_tc_mapping,
 		.queue_priority_mapping	= da8xx_queue_priority_mapping,
 	},
@@ -159,6 +191,8 @@ static struct edma_soc_info da850_edma_info[] = {
 		.n_slot			= 128,
 		.n_tc			= 1,
 		.n_cc			= 1,
+		.rsv_chans		= da850_dma1_rsv_chans,
+		.rsv_slots		= da850_dma1_rsv_slots,
 		.queue_tc_mapping	= da850_queue_tc_mapping,
 		.queue_priority_mapping	= da850_queue_priority_mapping,
 	},
