@@ -511,6 +511,27 @@ static u8 dm646x_default_priorities[DAVINCI_N_AINTC_IRQ] = {
 
 /*----------------------------------------------------------------------*/
 
+static const s16 dm646x_dma_rsv_chans[][2] = {
+	/* (offset, number) */
+	{ 0,  4},
+	{13,  3},
+	{24,  4},
+	{30,  2},
+	{54,  3},
+	{-1, -1}
+};
+
+static const s16 dm646x_dma_rsv_slots[][2] = {
+	/* (offset, number) */
+	{ 0,  4},
+	{13,  3},
+	{24,  4},
+	{30,  2},
+	{54,  3},
+	{128, 384},
+	{-1, -1}
+};
+
 /* Four Transfer Controllers on DM646x */
 static const s8
 dm646x_queue_tc_mapping[][2] = {
@@ -539,6 +560,8 @@ static struct edma_soc_info dm646x_edma_info[] = {
 		.n_slot			= 512,
 		.n_tc			= 4,
 		.n_cc			= 1,
+		.rsv_chans		= dm646x_dma_rsv_chans,
+		.rsv_slots		= dm646x_dma_rsv_slots,
 		.queue_tc_mapping	= dm646x_queue_tc_mapping,
 		.queue_priority_mapping	= dm646x_queue_priority_mapping,
 	},
