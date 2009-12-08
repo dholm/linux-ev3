@@ -504,7 +504,7 @@ static void vpif_config_format(struct channel_obj *ch)
 	if (ch->vpifparams.iface.if_type == VPIF_IF_RAW_BAYER)
 		common->fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_SBGGR8;
 	else
-		common->fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUV422P;
+		common->fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_NV16;
 	common->fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 }
 
@@ -543,7 +543,7 @@ static int vpif_check_format(struct channel_obj *ch,
 	/**
 	 * first check for the pixel format. If if_type is Raw bayer,
 	 * only V4L2_PIX_FMT_SBGGR8 format is supported. Otherwise only
-	 * V4L2_PIX_FMT_YUV422P is supported
+	 * V4L2_PIX_FMT_NV16 is supported
 	 */
 	if (vpif_params->iface.if_type == VPIF_IF_RAW_BAYER) {
 		if (pixfmt->pixelformat != V4L2_PIX_FMT_SBGGR8) {
@@ -554,12 +554,12 @@ static int vpif_check_format(struct channel_obj *ch,
 			pixfmt->pixelformat = V4L2_PIX_FMT_SBGGR8;
 		}
 	} else {
-		if (pixfmt->pixelformat != V4L2_PIX_FMT_YUV422P) {
+		if (pixfmt->pixelformat != V4L2_PIX_FMT_NV16) {
 			if (!update) {
 				vpif_dbg(2, debug, "invalid pixel format\n");
 				goto exit;
 			}
-			pixfmt->pixelformat = V4L2_PIX_FMT_YUV422P;
+			pixfmt->pixelformat = V4L2_PIX_FMT_NV16;
 		}
 	}
 
@@ -1567,7 +1567,7 @@ static int vpif_enum_fmt_vid_cap(struct file *file, void  *priv,
 	} else {
 		fmt->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		strcpy(fmt->description, "YCbCr4:2:2 YC Planar");
-		fmt->pixelformat = V4L2_PIX_FMT_YUV422P;
+		fmt->pixelformat = V4L2_PIX_FMT_NV16;
 	}
 	return 0;
 }
