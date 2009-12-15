@@ -841,11 +841,38 @@ static int __exit nand_davinci_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
+static int davinci_nand_suspend(struct platform_device *pdev,
+							pm_message_t state)
+{
+	struct davinci_nand_info *info = platform_get_drvdata(pdev);
+
+	clk_disable(info->clk);
+
+	return 0;
+}
+
+static int davinci_nand_resume(struct platform_device *pdev)
+{
+	struct davinci_nand_info *info = platform_get_drvdata(pdev);
+
+	clk_enable(info->clk);
+
+	return 0;
+}
+
+#else
+#define davinci_nand_suspend	NULL
+#define davinci_nand_resume	NULL
+#endif	/* CONFIG_PM */
+
 static struct platform_driver nand_davinci_driver = {
 	.remove		= __exit_p(nand_davinci_remove),
 	.driver		= {
 		.name	= "davinci_nand",
 	},
+	.suspend	= davinci_nand_suspend,
+	.resume		= davinci_nand_resume,
 };
 MODULE_ALIAS("platform:davinci_nand");
 
