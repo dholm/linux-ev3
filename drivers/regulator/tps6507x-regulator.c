@@ -159,13 +159,15 @@ struct tps_info {
 	unsigned max_uV;
 	u8 table_len;
 	const u16 *table;
+	/* HIGH register is used to control the output voltage for DCDC2/3 */
+	unsigned reg_high:1;
 };
 
 struct tps_pmic {
 	struct regulator_desc desc[TPS6507X_NUM_REGULATOR];
 	struct i2c_client *client;
 	struct regulator_dev *rdev[TPS6507X_NUM_REGULATOR];
-	const struct tps_info *info[TPS6507X_NUM_REGULATOR];
+	struct tps_info *info[TPS6507X_NUM_REGULATOR];
 	struct mutex io_lock;
 };
 
@@ -352,10 +354,16 @@ static int tps6507x_dcdc_get_voltage(struct regulator_dev *dev)
 		reg = TPS6507X_REG_DEFDCDC1;
 		break;
 	case TPS6507X_DCDC_2:
-		reg = TPS6507X_REG_DEFDCDC2_LOW;
+		if (tps->info[dcdc]->reg_high)
+			reg = TPS6507X_REG_DEFDCDC2_HIGH;
+		else
+			reg = TPS6507X_REG_DEFDCDC2_LOW;
 		break;
 	case TPS6507X_DCDC_3:
-		reg = TPS6507X_REG_DEFDCDC3_LOW;
+		if (tps->info[dcdc]->reg_high)
+			reg = TPS6507X_REG_DEFDCDC3_HIGH;
+		else
+			reg = TPS6507X_REG_DEFDCDC3_LOW;
 		break;
 	default:
 		return -EINVAL;
@@ -381,10 +389,16 @@ static int tps6507x_dcdc_set_voltage(struct regulator_dev *dev,
 		reg = TPS6507X_REG_DEFDCDC1;
 		break;
 	case TPS6507X_DCDC_2:
-		reg = TPS6507X_REG_DEFDCDC2_LOW;
+		if (tps->info[dcdc]->reg_high)
+			reg = TPS6507X_REG_DEFDCDC2_HIGH;
+		else
+			reg = TPS6507X_REG_DEFDCDC2_LOW;
 		break;
 	case TPS6507X_DCDC_3:
-		reg = TPS6507X_REG_DEFDCDC3_LOW;
+		if (tps->info[dcdc]->reg_high)
+			reg = TPS6507X_REG_DEFDCDC3_HIGH;
+		else
+			reg = TPS6507X_REG_DEFDCDC3_LOW;
 		break;
 	default:
 		return -EINVAL;
@@ -542,7 +556,7 @@ static
 int tps_6507x_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	static int desc_id;
-	const struct tps_info *info = (void *)id->driver_data;
+	struct tps_info *info = (void *)id->driver_data;
 	struct regulator_init_data *init_data;
 	struct regulator_dev *rdev;
 	struct tps_pmic *tps;
@@ -573,6 +587,7 @@ int tps_6507x_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	for (i = 0; i < TPS6507X_NUM_REGULATOR; i++, info++, init_data++) {
 		/* Register the regulators */
 		tps->info[i] = info;
+		tps->info[i]->reg_high = (unsigned) init_data->driver_data;
 		tps->desc[i].name = info->name;
 		tps->desc[i].id = desc_id++;
 		tps->desc[i].n_voltages = num_voltages[i];
