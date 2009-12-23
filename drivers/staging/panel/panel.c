@@ -1323,6 +1323,7 @@ void panel_lcd_print(char *s)
 	if (lcd_enabled && lcd_initialized)
 		lcd_write(NULL, s, strlen(s), NULL);
 }
+EXPORT_SYMBOL(panel_lcd_print);
 
 /* initialize the LCD driver */
 void lcd_init(void)

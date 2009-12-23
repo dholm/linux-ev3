@@ -25,6 +25,8 @@
 
 #include <asm/irq.h>
 
+void panel_lcd_print(char *s);
+
 /* LCDC register offsets */
 #define LCDC_LCD_CTRL			0x04
 #define LCDC_LIDD_CTRL			0x0c
@@ -295,12 +297,56 @@ static int parport_da8xx_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
+static int parport_da8xx_suspend(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct parport *p = platform_get_drvdata(pdev);
+	struct da8xx_drvdata *dd = pp_to_drv(p);
+	u32 regval;
+
+	panel_lcd_print("\x1b[Ld");
+	regval = readl(dd->base + LCDC_LCD_CTRL);
+	regval |= LCD_CTRL_RASTER_MODE;
+	writel(regval, dd->base + LCDC_LCD_CTRL);
+	clk_disable(dd->clk);
+
+	return 0;
+
+}
+static int parport_da8xx_resume(struct device *dev)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct parport *p = platform_get_drvdata(pdev);
+	struct da8xx_drvdata *dd = pp_to_drv(p);
+	u32 regval;
+
+	clk_enable(dd->clk);
+	regval = readl(dd->base + LCDC_LCD_CTRL);
+	regval &= ~LCD_CTRL_RASTER_MODE;
+	writel(regval, dd->base + LCDC_LCD_CTRL);
+	panel_lcd_print("\x1b[LD");
+
+	return 0;
+}
+
+static struct dev_pm_ops parport_da8xx_pm = {
+	.suspend        = parport_da8xx_suspend,
+	.resume         = parport_da8xx_resume,
+};
+
+#define parport_da8xx_pm_ops (&parport_da8xx_pm)
+#else
+#define parport_da8xx_pm_ops NULL
+#endif
+
 MODULE_ALIAS("platform:da8xx_lcdc");
 
 static struct platform_driver da8xx_drv = {
 	.driver		= {
 		.name	= "da8xx_lcdc",
 		.owner	= THIS_MODULE,
+		.pm	= parport_da8xx_pm_ops,
 	},
 	.probe		= parport_da8xx_probe,
 	.remove		= parport_da8xx_remove,
