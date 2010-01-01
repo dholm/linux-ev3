@@ -549,4 +549,16 @@ config MTD_VMU
 	  To build this as a module select M here, the module will be called
 	  vmu-flash.
 
+config MTD_DAVINCI_NOR
+	tristate "TI DaVinci board mappings"
+	depends on MTD_CFI && ARCH_DAVINCI
+	help
+	  This enables access to the NOR flash chips on TI DaVinci-based
+	  boards. Use this driver instead of the generic PHYSMAP driver
+	  if the AEMIF needs to be reconfigured differently than the reset
+	  default or what is setup by the bootloader. The driver also provides
+	  power management features of gating of ASYNC module clock on suspend
+	  and re-calculation of access timings when the AEMIF clock input
+	  changes.
+
 endmenu
