@@ -22,7 +22,6 @@
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/nand.h>
 #include <linux/mtd/partitions.h>
-#include <linux/mtd/physmap.h>
 #include <linux/regulator/machine.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/flash.h>
@@ -34,6 +33,7 @@
 #include <mach/da8xx.h>
 #include <mach/nand.h>
 #include <mach/mux.h>
+#include <mach/flash.h>
 
 #define DA850_EVM_PHY_MASK		0x1
 #define DA850_EVM_MDIO_FREQUENCY	2200000 /* PHY bus frequency */
@@ -67,10 +67,21 @@ static struct mtd_partition da850_evm_norflash_partition[] = {
 	},
 };
 
-static struct physmap_flash_data da850_evm_norflash_data = {
+static struct davinci_aemif_timing da850_evm_norflash_timing = {
+	.wsetup		= 10,
+	.wstrobe	= 60,
+	.whold		= 10,
+	.rsetup		= 10,
+	.rstrobe	= 110,
+	.rhold		= 10,
+	.ta		= 30,
+};
+
+static struct davinciflash_pdata da850_evm_norflash_data = {
 	.width		= 2,
 	.parts		= da850_evm_norflash_partition,
 	.nr_parts	= ARRAY_SIZE(da850_evm_norflash_partition),
+	.timing		= &da850_evm_norflash_timing,
 };
 
 static struct resource da850_evm_norflash_resource[] = {
@@ -79,15 +90,20 @@ static struct resource da850_evm_norflash_resource[] = {
 		.end	= DA8XX_AEMIF_CS2_BASE + SZ_32M - 1,
 		.flags	= IORESOURCE_MEM,
 	},
+	{
+		.start	= DA8XX_AEMIF_CTL_BASE,
+		.end	= DA8XX_AEMIF_CTL_BASE + SZ_32K - 1,
+		.flags	= IORESOURCE_MEM,
+	},
 };
 
 static struct platform_device da850_evm_norflash_device = {
-	.name		= "physmap-flash",
+	.name		= "davinci-flash",
 	.id		= 0,
 	.dev		= {
 		.platform_data  = &da850_evm_norflash_data,
 	},
-	.num_resources	= 1,
+	.num_resources	= ARRAY_SIZE(da850_evm_norflash_resource),
 	.resource	= da850_evm_norflash_resource,
 };
 
@@ -188,23 +204,6 @@ static struct platform_device *da850_evm_devices[] __initdata = {
 	&da850_evm_norflash_device,
 };
 
-#define DA8XX_AEMIF_CE2CFG_OFFSET	0x10
-#define DA8XX_AEMIF_ASIZE_16BIT		0x1
-
-static void __init da850_evm_init_nor(void)
-{
-	void __iomem *aemif_addr;
-
-	aemif_addr = ioremap(DA8XX_AEMIF_CTL_BASE, SZ_32K);
-
-	/* Configure data bus width of CS2 to 16 bit */
-	writel(readl(aemif_addr + DA8XX_AEMIF_CE2CFG_OFFSET) |
-		DA8XX_AEMIF_ASIZE_16BIT,
-		aemif_addr + DA8XX_AEMIF_CE2CFG_OFFSET);
-
-	iounmap(aemif_addr);
-}
-
 static struct mtd_partition spi_flash_partitions[] = {
 	[0] = {
 		.name = "U-Boot",
@@ -275,8 +274,6 @@ static __init void da850_evm_setup_nor_nand(void)
 		if (ret)
 			pr_warning("da850_evm_init: nor mux setup failed: %d\n",
 				ret);
-
-		da850_evm_init_nor();
 
 		platform_add_devices(da850_evm_devices,
 					ARRAY_SIZE(da850_evm_devices));
