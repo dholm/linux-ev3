@@ -28,11 +28,9 @@
 #ifndef __ARCH_ARM_DAVINCI_NAND_H
 #define __ARCH_ARM_DAVINCI_NAND_H
 
+#include <mach/aemif.h>
 #include <linux/mtd/nand.h>
 
-#define NRCSR_OFFSET		0x00
-#define AWCCR_OFFSET		0x04
-#define A1CR_OFFSET		0x10
 #define NANDFCR_OFFSET		0x60
 #define NANDFSR_OFFSET		0x64
 #define NANDF1ECC_OFFSET	0x70
