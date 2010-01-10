@@ -34,6 +34,8 @@
 struct davinci_cpufreq {
 	struct device *dev;
 	struct clk *armclk;
+	struct clk *asyncclk;
+	unsigned long asyncrate;
 };
 static struct davinci_cpufreq cpufreq;
 
@@ -108,6 +110,9 @@ static int davinci_target(struct cpufreq_policy *policy,
 		pdata->set_voltage(idx);
 
 	ret = clk_set_rate(armclk, idx);
+
+	if (!ret && cpufreq.asyncclk)
+		ret = clk_set_rate(cpufreq.asyncclk, cpufreq.asyncrate);
 
 	/* if moving to lower freq, lower the voltage after lowering freq */
 	if (pdata->set_voltage && freqs.new < freqs.old)
@@ -185,6 +190,7 @@ static struct cpufreq_driver davinci_driver = {
 static int __init davinci_cpufreq_probe(struct platform_device *pdev)
 {
 	struct davinci_cpufreq_config *pdata = pdev->dev.platform_data;
+	struct clk *asyncclk;
 
 	if (!pdata)
 		return -EINVAL;
@@ -197,6 +203,12 @@ static int __init davinci_cpufreq_probe(struct platform_device *pdev)
 	if (IS_ERR(cpufreq.armclk)) {
 		dev_err(cpufreq.dev, "Unable to get ARM clock\n");
 		return PTR_ERR(cpufreq.armclk);
+	}
+
+	asyncclk = clk_get(NULL, "async");
+	if (!IS_ERR(asyncclk)) {
+		cpufreq.asyncclk = asyncclk;
+		cpufreq.asyncrate = clk_get_rate(asyncclk);
 	}
 
 	return cpufreq_register_driver(&davinci_driver);
