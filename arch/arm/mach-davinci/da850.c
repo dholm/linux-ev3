@@ -86,6 +86,7 @@ static struct clk pll0_sysclk3 = {
 	.parent		= &pll0_clk,
 	.flags		= CLK_PLL,
 	.div_reg	= PLLDIV3,
+	.set_rate	= davinci_set_sysclk_rate,
 };
 
 static struct clk pll0_sysclk4 = {
@@ -1027,6 +1028,9 @@ static struct platform_device da850_cpufreq_device = {
 
 int __init da850_register_cpufreq(void)
 {
+	/* cpufreq driver can help "async" clock constant */
+	clk_add_alias("async", NULL, "pll0_sysclk3", NULL);
+
 	return platform_device_register(&da850_cpufreq_device);
 }
 
