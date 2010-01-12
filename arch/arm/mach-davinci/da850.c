@@ -336,6 +336,14 @@ static struct clk aemif_clk = {
 	.flags		= ALWAYS_ENABLED,
 };
 
+static struct clk spi1_clk = {
+	.name		= "spi1",
+	.parent		= &pll0_sysclk2,
+	.lpsc		= DA8XX_LPSC1_SPI1,
+	.gpsc		= 1,
+	.flags		= DA850_CLK_ASYNC3,
+};
+
 static struct clk mcbsp0_clk = {
 	.name		= "mcbsp0",
 	.parent		= &pll0_sysclk2,
@@ -391,6 +399,7 @@ static struct clk_lookup da850_clks[] = {
 	CLK("da8xx_lcdc.0",	NULL,		&lcdc_clk),
 	CLK("davinci_mmc.0",	NULL,		&mmcsd_clk),
 	CLK(NULL,		"aemif",	&aemif_clk),
+	CLK("spi_davinci.1",	NULL,		&spi1_clk),
 	CLK("davinci-mcbsp.0",	NULL,		&mcbsp0_clk),
 	CLK("davinci-mcbsp.1",	NULL,		&mcbsp1_clk),
 	CLK(NULL,		NULL,		NULL),
@@ -549,6 +558,11 @@ static const struct mux_config da850_pins[] = {
 	MUX_CFG(DA850, EMA_CLK,		6,	0,	15,	1,	false)
 	MUX_CFG(DA850, EMA_WAIT_1,	6,	24,	15,	1,	false)
 	MUX_CFG(DA850, NEMA_CS_2,	7,	0,	15,	1,	false)
+	/* SPI1 function */
+	MUX_CFG(DA850, SPI1_CS_0,	5,	4,	15,	1,	false)
+	MUX_CFG(DA850, SPI1_CLK,	5,	8,	15,	1,	false)
+	MUX_CFG(DA850, SPI1_SOMI,	5,	16,	15,	1,	false)
+	MUX_CFG(DA850, SPI1_SIMO,	5,	20,	15,	1,	false)
 	/* GPIO function */
 	MUX_CFG(DA850, GPIO2_6,		6,	4,	15,	8,	false)
 	MUX_CFG(DA850, GPIO2_8,		5,	28,	15,	8,	false)
@@ -663,6 +677,11 @@ const short da850_nor_pins[] __initdata = {
 	DA850_EMA_A_14, DA850_EMA_A_15, DA850_EMA_A_16, DA850_EMA_A_17,
 	DA850_EMA_A_18, DA850_EMA_A_19, DA850_EMA_A_20, DA850_EMA_A_21,
 	DA850_EMA_A_22, DA850_EMA_A_23,
+	-1
+};
+
+const short da850_spi1_pins[] __initdata = {
+	DA850_SPI1_CS_0, DA850_SPI1_CLK, DA850_SPI1_SOMI, DA850_SPI1_SIMO,
 	-1
 };
 

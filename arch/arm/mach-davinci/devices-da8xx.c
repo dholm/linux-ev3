@@ -20,6 +20,7 @@
 #include <mach/time.h>
 #include <mach/da8xx.h>
 #include <mach/cpuidle.h>
+#include <mach/spi.h>
 
 #include "clock.h"
 
@@ -705,6 +706,69 @@ int __init da8xx_register_cpuidle(void)
 	da8xx_cpuidle_pdata.ddr2_ctlr_base = da8xx_get_mem_ctlr();
 
 	return platform_device_register(&da8xx_cpuidle_device);
+}
+
+static struct davinci_spi_platform_data da850_spi1_pdata = {
+	.version 	= SPI_VERSION_2,
+	.num_chipselect = 1,
+	.wdelay		= 0,
+	.odd_parity	= 0,
+	.parity_enable	= 0,
+	.wait_enable	= 0,
+	.timer_disable  = 0,
+	.clk_internal	= 1,
+	.cs_hold	= 1,
+	.intr_level	= 0,
+	.poll_mode	= 1,
+	.use_dma	= 1,
+	.c2tdelay	= 8,
+	.t2cdelay	= 8,
+};
+
+static struct resource da850_spi1_resources[] = {
+	[0] = {
+		.start = 0x01F0E000,
+		.end = 0x01F0E000 + 0xfff,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = IRQ_DA8XX_SPINT1,
+		.end = IRQ_DA8XX_SPINT1,
+		.flags = IORESOURCE_IRQ,
+	},
+	[2] = {
+		.start = EDMA_CTLR_CHAN(0, 18),
+		.end = EDMA_CTLR_CHAN(0, 18),
+		.flags = IORESOURCE_DMA,
+	},
+	[3] = {
+		.start = EDMA_CTLR_CHAN(0, 19),
+		.end = EDMA_CTLR_CHAN(0, 19),
+		.flags = IORESOURCE_DMA,
+	},
+	[4] = {
+		.start = 1,
+		.end = 1,
+		.flags = IORESOURCE_DMA,
+	},
+};
+
+static struct platform_device da850_spi1_device = {
+	.name = "spi_davinci",
+	.id = 1,
+	.resource = da850_spi1_resources,
+	.num_resources = ARRAY_SIZE(da850_spi1_resources),
+	.dev = {
+		.platform_data = &da850_spi1_pdata,
+	},
+};
+
+void __init da850_init_spi1(unsigned chipselect_mask,
+		struct spi_board_info *info, unsigned len)
+{
+	spi_register_board_info(info, len);
+
+	platform_device_register(&da850_spi1_device);
 }
 
 static struct resource da850_mcbsp0_resources[] = {

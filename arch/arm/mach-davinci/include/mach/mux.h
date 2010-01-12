@@ -894,6 +894,12 @@ enum davinci_da850_index {
 	DA850_EMA_WAIT_1,
 	DA850_NEMA_CS_2,
 
+	/* SPI1 function */
+	DA850_SPI1_CS_0,
+	DA850_SPI1_CLK,
+	DA850_SPI1_SOMI,
+	DA850_SPI1_SIMO,
+
 	/* GPIO function */
 	DA850_GPIO2_6,
 	DA850_GPIO2_8,
