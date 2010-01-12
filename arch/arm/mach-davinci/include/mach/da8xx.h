@@ -104,6 +104,8 @@ void __iomem * __init da8xx_get_mem_ctlr(void);
 int da850_register_pm(struct platform_device *pdev);
 void da850_init_spi1(unsigned chipselect_mask,
 	struct spi_board_info *info, unsigned len);
+void da830_init_spi0(unsigned chipselect_mask,
+	struct spi_board_info *info, unsigned len);
 int da850_init_mcbsp(struct davinci_mcbsp_platform_data *pdata);
 
 extern struct platform_device da8xx_serial_device;
