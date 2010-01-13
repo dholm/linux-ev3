@@ -165,7 +165,15 @@ struct davinci_spi {
 	void			(*get_rx)(u32 rx_data, struct davinci_spi *);
 	u32			(*get_tx)(struct davinci_spi *);
 
+	u32			speed;
+	u32			cs_num;
+	bool			in_use;
+
 	struct davinci_spi_slave slave[SPI_MAX_CHIPSELECT];
+
+#ifdef CONFIG_CPU_FREQ
+	struct notifier_block	freq_transition;
+#endif
 };
 
 #endif /* __DAVINCI_SPI_H */

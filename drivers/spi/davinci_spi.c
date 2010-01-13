@@ -27,6 +27,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/spi_bitbang.h>
+#include <linux/cpufreq.h>
 
 #include <mach/spi.h>
 #include <mach/edma.h>
@@ -137,6 +138,32 @@ static void davinci_spi_chipselect(struct spi_device *spi, int value)
 	}
 }
 
+static void davinci_spi_calc_clk_div(struct davinci_spi *davinci_spi)
+{
+	struct davinci_spi_platform_data *pdata;
+	unsigned long clk_rate;
+	u32 hz, cs_num, prescale;
+
+	pdata = davinci_spi->pdata;
+	cs_num = davinci_spi->cs_num;
+	hz = davinci_spi->speed;
+	clk_rate = clk_get_rate(davinci_spi->clk);
+	prescale = ((clk_rate / hz) - 1);
+	if (prescale > 0xff)
+		prescale = 0xff;
+
+	if (hz < (clk_rate / (prescale + 1)))
+		prescale++;
+
+	if (prescale < 2) {
+		pr_info("davinci SPI controller min. prescale value is 2\n");
+		prescale = 2;
+	}
+
+	clear_fmt_bits(davinci_spi->base, 0x0000ff00, cs_num);
+	set_fmt_bits(davinci_spi->base, prescale << 8, cs_num);
+}
+
 /*
  * davinci_spi_setup_transfer - This functions will determine transfer method
  * @spi: spi device on which data transfer to be done
@@ -153,7 +180,7 @@ static int davinci_spi_setup_transfer(struct spi_device *spi,
 	struct davinci_spi *davinci_spi;
 	struct davinci_spi_platform_data *pdata;
 	u8 bits_per_word = 0;
-	u32 hz = 0, prescale;
+	u32 hz = 0;
 
 	davinci_spi = spi_master_get_devdata(spi->master);
 	pdata = davinci_spi->pdata;
@@ -185,15 +212,15 @@ static int davinci_spi_setup_transfer(struct spi_device *spi,
 	if (!hz)
 		hz = spi->max_speed_hz;
 
+	davinci_spi->speed = hz;
+	davinci_spi->cs_num = spi->chip_select;
+
 	clear_fmt_bits(davinci_spi->base, SPIFMT_CHARLEN_MASK,
 			spi->chip_select);
 	set_fmt_bits(davinci_spi->base, bits_per_word & 0x1f,
 			spi->chip_select);
 
-	prescale = ((clk_get_rate(davinci_spi->clk) / hz) - 1) & 0xff;
-
-	clear_fmt_bits(davinci_spi->base, 0x0000ff00, spi->chip_select);
-	set_fmt_bits(davinci_spi->base, prescale << 8, spi->chip_select);
+	davinci_spi_calc_clk_div(davinci_spi);
 
 	return 0;
 }
@@ -521,7 +548,7 @@ static int davinci_spi_check_error(struct davinci_spi *davinci_spi,
 static int davinci_spi_bufs_pio(struct spi_device *spi, struct spi_transfer *t)
 {
 	struct davinci_spi *davinci_spi;
-	int int_status, count, ret;
+	int int_status, count, ret = 0;
 	u8 conv, tmp;
 	u32 tx_data, data1_reg_val;
 	u32 buf_val, flg_val;
@@ -537,11 +564,12 @@ static int davinci_spi_bufs_pio(struct spi_device *spi, struct spi_transfer *t)
 	conv = davinci_spi->slave[spi->chip_select].bytes_per_word;
 	davinci_spi->count = t->len / conv;
 
-	INIT_COMPLETION(davinci_spi->done);
-
 	ret = davinci_spi_bufs_prep(spi, davinci_spi);
 	if (ret)
 		return ret;
+
+	INIT_COMPLETION(davinci_spi->done);
+	davinci_spi->in_use = true;
 
 	/* Enable SPI */
 	set_io_bits(davinci_spi->base + SPIGCR1, SPIGCR1_SPIENA_MASK);
@@ -642,12 +670,15 @@ static int davinci_spi_bufs_pio(struct spi_device *spi, struct spi_transfer *t)
 
 	ret = davinci_spi_check_error(davinci_spi, int_status);
 	if (ret != 0)
-		return ret;
+		goto out;
 
 	/* SPI Framework maintains the count only in bytes so convert back */
 	davinci_spi->count *= conv;
+out:
+	davinci_spi->in_use = false;
+	complete(&davinci_spi->done);
 
-	return t->len;
+	return (ret != 0) ? ret : t->len;
 }
 
 #define DAVINCI_DMA_DATA_TYPE_S8	0x01
@@ -663,7 +694,7 @@ static int davinci_spi_bufs_dma(struct spi_device *spi, struct spi_transfer *t)
 	u8 tmp;
 	u32 data1_reg_val;
 	struct davinci_spi_dma *davinci_spi_dma;
-	int word_len, data_type, ret;
+	int word_len, data_type, ret = 0;
 	unsigned long tx_reg, rx_reg;
 	struct davinci_spi_platform_data *pdata;
 	struct device *sdev;
@@ -684,8 +715,6 @@ static int davinci_spi_bufs_dma(struct spi_device *spi, struct spi_transfer *t)
 	conv = davinci_spi->slave[spi->chip_select].bytes_per_word;
 	davinci_spi->count = t->len / conv;
 
-	INIT_COMPLETION(davinci_spi->done);
-
 	init_completion(&davinci_spi_dma->dma_rx_completion);
 	init_completion(&davinci_spi_dma->dma_tx_completion);
 
@@ -702,7 +731,10 @@ static int davinci_spi_bufs_dma(struct spi_device *spi, struct spi_transfer *t)
 
 	ret = davinci_spi_bufs_prep(spi, davinci_spi);
 	if (ret)
-		return ret;
+		return -EINVAL;
+
+	INIT_COMPLETION(davinci_spi->done);
+	davinci_spi->in_use = true;
 
 	/* Put delay val if required */
 	iowrite32(0 | (pdata->c2tdelay << SPI_C2TDELAY_SHIFT) |
@@ -738,7 +770,8 @@ static int davinci_spi_bufs_dma(struct spi_device *spi, struct spi_transfer *t)
 		if (dma_mapping_error(&spi->dev, t->tx_dma)) {
 			dev_dbg(sdev, "Unable to DMA map a %d bytes"
 				" TX buffer\n", count);
-			return -ENOMEM;
+			ret = -ENOMEM;
+			goto out;
 		}
 		temp_count = count;
 	} else {
@@ -749,7 +782,8 @@ static int davinci_spi_bufs_dma(struct spi_device *spi, struct spi_transfer *t)
 		if (dma_mapping_error(&spi->dev, t->tx_dma)) {
 			dev_dbg(sdev, "Unable to DMA map a %d bytes"
 				" TX tmp buffer\n", count);
-			return -ENOMEM;
+			ret = -ENOMEM;
+			goto out;
 		}
 		temp_count = count + 1;
 	}
@@ -773,7 +807,8 @@ static int davinci_spi_bufs_dma(struct spi_device *spi, struct spi_transfer *t)
 			if (t->tx_buf != NULL)
 				dma_unmap_single(NULL, t->tx_dma,
 						 count, DMA_TO_DEVICE);
-			return -ENOMEM;
+			ret = -ENOMEM;
+			goto out;
 		}
 		edma_set_transfer_params(davinci_spi_dma->dma_rx_channel,
 				data_type, count, 1, 0, ASYNC);
@@ -816,13 +851,59 @@ static int davinci_spi_bufs_dma(struct spi_device *spi, struct spi_transfer *t)
 
 	ret = davinci_spi_check_error(davinci_spi, int_status);
 	if (ret != 0)
-		return ret;
+		goto out;
 
 	/* SPI Framework maintains the count only in bytes so convert back */
 	davinci_spi->count *= conv;
+out:
+	davinci_spi->in_use = false;
+	complete(&davinci_spi->done);
 
-	return t->len;
+	return (ret != 0) ? ret : t->len;
 }
+
+#ifdef CONFIG_CPU_FREQ
+static int davinci_spi_cpufreq_transition(struct notifier_block *nb,
+				     unsigned long val, void *data)
+{
+	struct davinci_spi_platform_data *pdata;
+	struct davinci_spi *davinci_spi;
+
+	davinci_spi = container_of(nb, struct davinci_spi, freq_transition);
+	pdata = davinci_spi->pdata;
+
+	if (val == CPUFREQ_PRECHANGE) {
+		if (davinci_spi->in_use)
+			wait_for_completion(&davinci_spi->done);
+	} else if (val == CPUFREQ_POSTCHANGE) {
+		davinci_spi_calc_clk_div(davinci_spi);
+	}
+	return 0;
+}
+
+static inline int davinci_spi_cpufreq_register(struct davinci_spi *spi)
+{
+	spi->freq_transition.notifier_call = davinci_spi_cpufreq_transition;
+
+	return cpufreq_register_notifier(&spi->freq_transition,
+					 CPUFREQ_TRANSITION_NOTIFIER);
+}
+
+static inline void davinci_spi_cpufreq_deregister(struct davinci_spi *spi)
+{
+	cpufreq_unregister_notifier(&spi->freq_transition,
+				    CPUFREQ_TRANSITION_NOTIFIER);
+}
+#else
+static inline int davinci_spi_cpufreq_register(struct davinci_spi *spi)
+{
+	return 0;
+}
+
+static inline void davinci_spi_cpufreq_deregister(struct davinci_spi *spi)
+{
+}
+#endif
 
 /*
  * davinci_spi_irq - IRQ handler for DaVinci SPI
@@ -1008,6 +1089,12 @@ static int davinci_spi_probe(struct platform_device *pdev)
 	davinci_spi->get_tx = davinci_spi_tx_buf_u8;
 
 	init_completion(&davinci_spi->done);
+	ret = davinci_spi_cpufreq_register(davinci_spi);
+	if (ret) {
+		pr_info("davinci SPI contorller driver failed to register "
+							"cpufreq\n");
+		goto free_dma;
+	}
 
 	/* Reset In/OUT SPI module */
 	iowrite32(0, davinci_spi->base + SPIGCR0);
@@ -1032,7 +1119,7 @@ static int davinci_spi_probe(struct platform_device *pdev)
 
 	ret = spi_bitbang_start(&davinci_spi->bitbang);
 	if (ret)
-		goto free_clk;
+		goto unregister_cpufreq;
 
 	dev_info(&pdev->dev, "Controller at 0x%p \n", davinci_spi->base);
 
@@ -1042,6 +1129,10 @@ static int davinci_spi_probe(struct platform_device *pdev)
 
 	return ret;
 
+unregister_cpufreq:
+	davinci_spi_cpufreq_deregister(davinci_spi);
+free_dma:
+	kfree(davinci_spi->dma_channels);
 free_clk:
 	clk_disable(davinci_spi->clk);
 	clk_put(davinci_spi->clk);
@@ -1079,6 +1170,8 @@ static int __exit davinci_spi_remove(struct platform_device *pdev)
 	davinci_spi = spi_master_get_devdata(master);
 
 	spi_bitbang_stop(&davinci_spi->bitbang);
+
+	davinci_spi_cpufreq_deregister(davinci_spi);
 
 	clk_disable(davinci_spi->clk);
 	clk_put(davinci_spi->clk);
