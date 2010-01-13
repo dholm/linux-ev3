@@ -922,6 +922,14 @@ static int __init fb_probe(struct platform_device *device)
 	/* enable raster engine */
 	lcd_enable_raster();
 
+	if (par->panel_power_ctrl) {
+		/* Switch off panel power and backlight */
+		par->panel_power_ctrl(0);
+
+		/* Switch on panel power and backlight */
+		par->panel_power_ctrl(1);
+	}
+
 	return 0;
 
 #ifdef CONFIG_CPU_FREQ
