@@ -196,6 +196,14 @@ config DA850_UI_CLCD
 	  NOTE: Please take care while choosing this option, Graphical LCD will
 	  not be functional if Character LCD is selected.
 
+config DA850_UI_VIDEO_PORT
+	bool "Video Port Interface"
+	help
+	  Say Y if you want to use Video Port Interface (VPIF) on the
+	  DA850/OMAP-L138 EVM. The Video decoders/encoders are found on the
+	  UI daughter card that is supplied with the EVM.
+	  NOTE: Please make sure to disable RMII and CLCD options when you
+	  select Video Port Interface.
 endchoice
 
 config DAVINCI_MUX
