@@ -2055,14 +2055,14 @@ config FB_SH7760
 	  panels <= 320 pixel horizontal resolution.
 
 config FB_DA8XX
-	tristate "DA8xx/OMAP-L1xx Framebuffer support"
+	tristate "DA8xx/OMAP-L1xx/AM1xxx Framebuffer support"
 	depends on FB && ARCH_DAVINCI_DA8XX
 	select FB_CFB_FILLRECT
 	select FB_CFB_COPYAREA
 	select FB_CFB_IMAGEBLIT
 	---help---
 	  This is the frame buffer device driver for the TI LCD controller
-	  found on DA8xx/OMAP-L1xx SoCs.
+	  found on DA8xx/OMAP-L1xx/AM1xxx SoCs.
 	  If unsure, say N.
 
 config FB_VIRTUAL
