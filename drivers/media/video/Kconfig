@@ -500,24 +500,24 @@ endmenu # encoder / decoder chips
 
 config VIDEO_DAVINCI_VPIF_DISPLAY
 	tristate "DaVinci Video VPIF Display"
-	depends on VIDEO_DEV && MACH_DAVINCI_DM6467_EVM
+	depends on VIDEO_DEV && (MACH_DAVINCI_DM6467_EVM || MACH_DAVINCI_DA850_EVM)
 	select VIDEOBUF_DMA_CONTIG
 	select VIDEO_DAVINCI_VPIF
 	select VIDEO_ADV7343
 	select VIDEO_THS7303
 	help
-	  Support for DaVinci VPIF Display on DM6467 EVM.
+	  Support for DaVinci VPIF Display on DM6467 EVM and/or DA850/OMAP-L138/AM18xx EVM.
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called vpif_display.
 
 config VIDEO_DAVINCI_VPIF_CAPTURE
 	tristate "DaVinci Video VPIF Capture"
-	depends on VIDEO_DEV && MACH_DAVINCI_DM6467_EVM
+	depends on VIDEO_DEV && (MACH_DAVINCI_DM6467_EVM || MACH_DAVINCI_DA850_EVM)
 	select VIDEOBUF_DMA_CONTIG
 	select VIDEO_DAVINCI_VPIF
 	help
-	  Support for DaVinci VPIF Capture on DM6467 EVM.
+	  Support for DaVinci VPIF Capture on DM6467 EVM and/or DA850/OMAP-L138/AM18xx EVM.
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called vpif_capture.
