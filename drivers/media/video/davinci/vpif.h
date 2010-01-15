@@ -19,7 +19,7 @@
 #include <linux/io.h>
 #include <linux/videodev2.h>
 #include <mach/hardware.h>
-#include <mach/dm646x.h>
+#include <mach/vpif.h>
 
 /* Maximum channel allowed */
 #define VPIF_NUM_CHANNELS		(4)

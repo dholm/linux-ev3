@@ -498,33 +498,33 @@ config VIDEO_UPD64083
 
 endmenu # encoder / decoder chips
 
-config DISPLAY_DAVINCI_DM646X_EVM
-	tristate "DM646x EVM Video Display"
+config VIDEO_DAVINCI_VPIF_DISPLAY
+	tristate "DaVinci Video VPIF Display"
 	depends on VIDEO_DEV && MACH_DAVINCI_DM6467_EVM
 	select VIDEOBUF_DMA_CONTIG
 	select VIDEO_DAVINCI_VPIF
 	select VIDEO_ADV7343
 	select VIDEO_THS7303
 	help
-	  Support for DM6467 based display device.
+	  Support for DaVinci VPIF Display on DM6467 EVM.
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called vpif_display.
 
-config CAPTURE_DAVINCI_DM646X_EVM
-	tristate "DM646x EVM Video Capture"
+config VIDEO_DAVINCI_VPIF_CAPTURE
+	tristate "DaVinci Video VPIF Capture"
 	depends on VIDEO_DEV && MACH_DAVINCI_DM6467_EVM
 	select VIDEOBUF_DMA_CONTIG
 	select VIDEO_DAVINCI_VPIF
 	help
-	  Support for DM6467 based capture device.
+	  Support for DaVinci VPIF Capture on DM6467 EVM.
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called vpif_capture.
 
 config VIDEO_DAVINCI_VPIF
 	tristate "DaVinci VPIF Driver"
-	depends on DISPLAY_DAVINCI_DM646X_EVM
+	depends on VIDEO_DAVINCI_VPIF_DISPLAY
 	help
 	  Support for DaVinci VPIF Driver.
 

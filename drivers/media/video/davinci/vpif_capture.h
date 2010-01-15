@@ -28,7 +28,6 @@
 #include <media/v4l2-device.h>
 #include <media/videobuf-core.h>
 #include <media/videobuf-dma-contig.h>
-#include <mach/dm646x.h>
 
 #include "vpif.h"
 
