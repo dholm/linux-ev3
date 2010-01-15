@@ -43,6 +43,7 @@ struct vpif_subdev_info {
 
 struct vpif_display_config {
 	int (*set_clock)(int, int);
+	int (*intr_status)(void __iomem *vpif_base, int);
 	struct vpif_subdev_info *subdevinfo;
 	int subdev_count;
 	const char **output;
@@ -65,6 +66,7 @@ struct vpif_capture_chan_config {
 struct vpif_capture_config {
 	int (*setup_input_channel_mode)(int);
 	int (*setup_input_path)(int, const char *);
+	int (*intr_status)(void __iomem *vpif_base, int);
 	struct vpif_capture_chan_config chan_config[VPIF_CAPTURE_MAX_CHANNELS];
 	struct vpif_subdev_info *subdev_info;
 	int subdev_count;

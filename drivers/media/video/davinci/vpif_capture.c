@@ -287,6 +287,7 @@ static void vpif_schedule_next_buffer(struct common_obj *common)
  */
 static irqreturn_t vpif_channel_isr(int irq, void *dev_id)
 {
+	struct vpif_capture_config *config = vpif_dev->platform_data;
 	struct vpif_device *dev = &vpif_obj;
 	struct common_obj *common;
 	struct channel_obj *ch;
@@ -298,6 +299,10 @@ static irqreturn_t vpif_channel_isr(int irq, void *dev_id)
 	ch = dev->dev[channel_id];
 
 	field = ch->common[VPIF_VIDEO_INDEX].fmt.fmt.pix.field;
+
+	if (!config->intr_status ||
+			!config->intr_status(vpif_base, channel_id))
+		return IRQ_NONE;
 
 	for (i = 0; i < VPIF_NUMBER_OF_OBJECTS; i++) {
 		common = &ch->common[i];
@@ -1870,7 +1875,7 @@ static __init int vpif_probe(struct platform_device *pdev)
 	k = 0;
 	while ((res = platform_get_resource(pdev, IORESOURCE_IRQ, k))) {
 		for (i = res->start; i <= res->end; i++) {
-			if (request_irq(i, vpif_channel_isr, IRQF_DISABLED,
+			if (request_irq(i, vpif_channel_isr, IRQF_SHARED,
 					"VPIF_Capture",
 				(void *)(&vpif_obj.dev[k]->channel_id))) {
 				err = -EBUSY;
