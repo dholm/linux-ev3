@@ -573,7 +573,7 @@ struct regulator_init_data tps65070_regulator_data[] = {
 	{
 		.constraints = {
 			.min_uV = 950000,
-			.max_uV = 1320000,
+			.max_uV = 1380000,
 			.valid_ops_mask = (REGULATOR_CHANGE_VOLTAGE |
 				REGULATOR_CHANGE_STATUS),
 			.boot_on = 1,

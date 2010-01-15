@@ -940,12 +940,39 @@ struct da850_opp {
 	unsigned int	cvdd_max; /* in uV */
 };
 
+static const struct da850_opp da850_opp_456 = {
+	.freq		= 456000,
+	.prediv		= 1,
+	.mult		= 19,
+	.postdiv	= 1,
+	.cvdd_min	= 1300000,
+	.cvdd_max	= 1380000,
+};
+
+static const struct da850_opp da850_opp_408 = {
+	.freq		= 408000,
+	.prediv		= 1,
+	.mult		= 17,
+	.postdiv	= 1,
+	.cvdd_min	= 1300000,
+	.cvdd_max	= 1320000,
+};
+
+static const struct da850_opp da850_opp_372 = {
+	.freq		= 372000,
+	.prediv		= 1,
+	.mult		= 31,
+	.postdiv	= 2,
+	.cvdd_min	= 1200000,
+	.cvdd_max	= 1320000,
+};
+
 static const struct da850_opp da850_opp_300 = {
 	.freq		= 300000,
 	.prediv		= 1,
 	.mult		= 25,
 	.postdiv	= 2,
-	.cvdd_min	= 1140000,
+	.cvdd_min	= 1200000,
 	.cvdd_max	= 1320000,
 };
 
@@ -954,7 +981,7 @@ static const struct da850_opp da850_opp_200 = {
 	.prediv		= 1,
 	.mult		= 25,
 	.postdiv	= 3,
-	.cvdd_min	= 1050000,
+	.cvdd_min	= 1100000,
 	.cvdd_max	= 1160000,
 };
 
@@ -974,6 +1001,9 @@ static const struct da850_opp da850_opp_96 = {
 	}
 
 static struct cpufreq_frequency_table da850_freq_table[] = {
+	OPP(456),
+	OPP(408),
+	OPP(372),
 	OPP(300),
 	OPP(200),
 	OPP(96),
@@ -983,32 +1013,8 @@ static struct cpufreq_frequency_table da850_freq_table[] = {
 	},
 };
 
-#ifdef CONFIG_REGULATOR
-static struct regulator *cvdd;
-
-static int da850_set_voltage(unsigned int index)
-{
-	struct da850_opp *opp;
-
-	if (!cvdd)
-		return -ENODEV;
-
-	opp = (struct da850_opp *) da850_freq_table[index].index;
-
-	return regulator_set_voltage(cvdd, opp->cvdd_min, opp->cvdd_max);
-}
-
-static int da850_regulator_init(void)
-{
-	cvdd = regulator_get(NULL, "cvdd");
-	if (WARN(IS_ERR(cvdd), "Unable to obtain voltage regulator for CVDD;"
-					" voltage scaling unsupported\n")) {
-		return PTR_ERR(cvdd);
-	}
-
-	return 0;
-}
-#endif
+static int da850_set_voltage(unsigned int index);
+static int da850_regulator_init(void);
 
 static struct davinci_cpufreq_config cpufreq_info = {
 	.freq_table = &da850_freq_table[0],
@@ -1025,10 +1031,45 @@ static struct platform_device da850_cpufreq_device = {
 	},
 };
 
+#ifdef CONFIG_REGULATOR
+static struct regulator *cvdd;
+
+static int da850_set_voltage(unsigned int index)
+{
+	struct da850_opp *opp;
+	struct cpufreq_frequency_table *freq_table = cpufreq_info.freq_table;
+
+	if (!cvdd)
+		return -ENODEV;
+
+	opp = (struct da850_opp *) freq_table[index].index;
+
+	return regulator_set_voltage(cvdd, opp->cvdd_min, opp->cvdd_max);
+}
+
+static int da850_regulator_init(void)
+{
+	cvdd = regulator_get(NULL, "cvdd");
+	if (WARN(IS_ERR(cvdd), "Unable to obtain voltage regulator for CVDD;"
+					" voltage scaling unsupported\n")) {
+		return PTR_ERR(cvdd);
+	}
+
+	return 0;
+}
+#endif
+
 int __init da850_register_cpufreq(void)
 {
 	/* cpufreq driver can help "async" clock constant */
 	clk_add_alias("async", NULL, "pll0_sysclk3", NULL);
+
+	if (cpu_is_davinci_da8xx_300mhz())
+		cpufreq_info.freq_table = &da850_freq_table[3];
+	else if (cpu_is_davinci_da8xx_372mhz())
+		cpufreq_info.freq_table = &da850_freq_table[2];
+	else if (cpu_is_davinci_da8xx_408mhz())
+		cpufreq_info.freq_table = &da850_freq_table[1];
 
 	return platform_device_register(&da850_cpufreq_device);
 }
@@ -1037,17 +1078,18 @@ static int da850_round_armrate(struct clk *clk, unsigned long rate)
 {
 	int i, ret = 0, diff;
 	unsigned int best = (unsigned int) -1;
+	struct cpufreq_frequency_table *freq_table = cpufreq_info.freq_table;
 
 	rate /= 1000; /* convert to kHz */
 
-	for (i = 0; da850_freq_table[i].frequency != CPUFREQ_TABLE_END; i++) {
-		diff = da850_freq_table[i].frequency - rate;
+	for (i = 0; freq_table[i].frequency != CPUFREQ_TABLE_END; i++) {
+		diff = freq_table[i].frequency - rate;
 		if (diff < 0)
 			diff = -diff;
 
 		if (diff < best) {
 			best = diff;
-			ret = da850_freq_table[i].frequency;
+			ret = freq_table[i].frequency;
 		}
 	}
 
@@ -1066,9 +1108,10 @@ static int da850_set_pll0rate(struct clk *clk, unsigned long index)
 	unsigned int prediv, mult, postdiv;
 	struct da850_opp *opp;
 	struct pll_data *pll = clk->pll_data;
+	struct cpufreq_frequency_table *freq_table = cpufreq_info.freq_table;
 	int ret;
 
-	opp = (struct da850_opp *) da850_freq_table[index].index;
+	opp = (struct da850_opp *) freq_table[index].index;
 	prediv = opp->prediv;
 	mult = opp->mult;
 	postdiv = opp->postdiv;

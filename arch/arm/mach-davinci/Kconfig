@@ -40,6 +40,25 @@ config ARCH_DAVINCI_DA850
 	select ARCH_DAVINCI_DA8XX
 	select ARCH_HAS_CPUFREQ
 
+choice
+	prompt "Select Maximum DA8xx/OMAP-L1 SoC speed"
+	depends on ARCH_DAVINCI_DA8XX
+	help
+	  Select the maximum speed the SoC can operate at.
+
+config DA8XX_MAX_SPEED_300
+	bool "300 MHz"
+
+config DA8XX_MAX_SPEED_372
+	bool "372 MHz"
+
+config DA8XX_MAX_SPEED_408
+	bool "408 MHz"
+
+config DA8XX_MAX_SPEED_456
+	bool "456 MHz"
+endchoice
+
 config ARCH_DAVINCI_DA8XX
 	bool
 
