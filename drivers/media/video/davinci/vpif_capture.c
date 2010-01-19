@@ -2033,7 +2033,36 @@ static int vpif_remove(struct platform_device *device)
 static int
 vpif_suspend(struct device *dev)
 {
-	return -1;
+
+	struct common_obj *common;
+	struct channel_obj *ch;
+	int i;
+
+	for (i = 0; i < VPIF_CAPTURE_MAX_DEVICES; i++) {
+		/* Get the pointer to the channel object */
+		ch = vpif_obj.dev[i];
+		common = &ch->common[VPIF_VIDEO_INDEX];
+		if (mutex_lock_interruptible(&common->lock))
+			return -ERESTARTSYS;
+
+		if (ch->usrs && common->io_usrs) {
+			/* Disable channel */
+			if (VPIF_CHANNEL0_VIDEO == ch->channel_id) {
+				enable_channel0(0);
+				channel0_intr_enable(0);
+			}
+
+			if ((VPIF_CHANNEL1_VIDEO == ch->channel_id) ||
+			    (2 == common->started)) {
+				enable_channel1(0);
+				channel1_intr_enable(0);
+			}
+		}
+
+		mutex_unlock(&common->lock);
+	}
+
+	return 0;
 }
 
 /**
@@ -2044,7 +2073,35 @@ vpif_suspend(struct device *dev)
 static int
 vpif_resume(struct device *dev)
 {
-	return -1;
+	struct common_obj *common;
+	struct channel_obj *ch;
+	int i;
+
+	for (i = 0; i < VPIF_CAPTURE_MAX_DEVICES; i++) {
+		/* Get the pointer to the channel object */
+		ch = vpif_obj.dev[i];
+		common = &ch->common[VPIF_VIDEO_INDEX];
+		if (mutex_lock_interruptible(&common->lock))
+			return -ERESTARTSYS;
+
+		if (ch->usrs && common->io_usrs) {
+			/* Disable channel */
+			if (VPIF_CHANNEL0_VIDEO == ch->channel_id) {
+				enable_channel0(1);
+				channel0_intr_enable(1);
+			}
+
+			if ((VPIF_CHANNEL1_VIDEO == ch->channel_id) ||
+			    (2 == common->started)) {
+				enable_channel1(1);
+				channel1_intr_enable(1);
+			}
+		}
+
+		mutex_unlock(&common->lock);
+	}
+
+	return 0;
 }
 
 static const struct dev_pm_ops vpif_dev_pm_ops = {
