@@ -28,6 +28,7 @@
 
 #include <mach/hardware.h>
 #include <mach/irqs.h>
+#include <mach/am35xx.h>
 #include <plat/mux.h>
 #include <plat/usb.h>
 
@@ -150,15 +151,26 @@ void __init usb_musb_init(void)
 {
 	if (cpu_is_omap243x()) {
 		musb_resources[0].start = OMAP243X_HS_BASE;
+		musb_resources[0].end = musb_resources[0].start + SZ_8K - 1;
+	} else if (cpu_is_omap3517() || cpu_is_omap3505()) {
+		musb_resources[0].start = AM35XX_IPSS_USBOTGSS_BASE;
+		musb_resources[1].start = INT_35XX_USBOTG_IRQ;
+		/* AM3517 can provide max of 500mA */
+		musb_plat.power = 250;
+		/* AM3517 has to map for CPPI4.1 registers also */
+		musb_resources[0].end = musb_resources[0].start
+						+ (2 * SZ_16K) - 1;
+		/* AM3517 MUSB has 32K FIFO */
+		musb_config.ram_bits = 13; /* 2^(13+2) = 32K */
 	} else {
 		musb_resources[0].start = OMAP34XX_HSUSB_OTG_BASE;
+		musb_resources[0].end = musb_resources[0].start + SZ_8K - 1;
 		/* OMAP3EVM Rev >= E can source 500mA */
 		if (get_omap3_evm_rev() >= OMAP3EVM_BOARD_GEN_2) {
 			musb_plat.power = 250;
 			musb_plat.extvbus = 1;
 		}
 	}
-	musb_resources[0].end = musb_resources[0].start + SZ_8K - 1;
 
 	/*
 	 * REVISIT: This line can be removed once all the platforms using
