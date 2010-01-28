@@ -388,10 +388,7 @@ static void vpif_calculate_offsets(struct channel_obj *ch)
 		vid_ch->buf_field = common->fmt.fmt.pix.field;
 	}
 
-	if (V4L2_MEMORY_USERPTR == common->memory)
-		sizeimage = common->fmt.fmt.pix.sizeimage;
-	else
-		sizeimage = config_params.channel_bufsize[ch->channel_id];
+	sizeimage = common->fmt.fmt.pix.sizeimage;
 
 	hpitch = common->fmt.fmt.pix.bytesperline;
 	vpitch = sizeimage / (hpitch * 2);
