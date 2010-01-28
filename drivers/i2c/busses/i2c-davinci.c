@@ -537,10 +537,9 @@ static int i2c_davinci_cpufreq_transition(struct notifier_block *nb,
 	struct davinci_i2c_dev *dev;
 
 	dev = container_of(nb, struct davinci_i2c_dev, freq_transition);
-	if (val == CPUFREQ_PRECHANGE) {
+	if (val == CPUFREQ_POSTCHANGE) {
 		wait_for_completion(&dev->xfr_complete);
 		davinci_i2c_reset_ctrl(dev, 0);
-	} else if (val == CPUFREQ_POSTCHANGE) {
 		i2c_davinci_calc_clk_dividers(dev);
 		davinci_i2c_reset_ctrl(dev, 1);
 	}
