@@ -26,6 +26,7 @@
 #include <mach/hardware.h>
 #include <mach/asp.h>
 #include <media/davinci/vpfe_capture.h>
+#include <linux/usb/musb.h>
 
 #define DM644X_EMAC_BASE		(0x01C80000)
 #define DM644X_EMAC_CNTRL_OFFSET	(0x0000)
@@ -37,5 +38,7 @@
 void __init dm644x_init(void);
 void __init dm644x_init_asp(struct snd_platform_data *pdata);
 void dm644x_set_vpfe_config(struct vpfe_config *cfg);
+extern void dm644x_usb_configure(struct musb_hdrc_platform_data *pdata,
+					u8 num_inst);
 
 #endif /* __ASM_ARCH_DM644X_H */

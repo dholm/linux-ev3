@@ -22,6 +22,7 @@
 #include <linux/mtd/partitions.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/flash.h>
+#include <linux/usb/musb.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -105,59 +106,43 @@ static irqreturn_t da830_evm_usb_ocic_irq(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+static struct musb_hdrc_platform_data usb_evm_data[] = {
+	{
+#ifdef CONFIG_USB_MUSB_OTG
+		.mode = MUSB_OTG,
+#elif defined(CONFIG_USB_MUSB_DUAL_ROLE)
+		.mode = MUSB_DUAL_ROLE,
+#elif defined(CONFIG_USB_MUSB_PERIPHERAL)
+		.mode =  MUSB_PERIPHERAL,
+#elif defined(CONFIG_USB_MUSB_HOST)
+		.mode = MUSB_HOST,
+#endif
+		.power = 255,
+		.potpgt = 8,
+		.set_vbus = NULL, /* VBUs is directly controlled by the IP */
+	}
+};
+
 static __init void da830_evm_usb_init(void)
 {
 	u32 cfgchip2;
 	int ret;
 
 	/*
-	 * Set up USB clock/mode in the CFGCHIP2 register.
-	 * FYI:  CFGCHIP2 is 0x0000ef00 initially.
+	 * Setup the Ref. clock frequency for the EVM at 24 MHz.
 	 */
-	cfgchip2 = __raw_readl(DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP2_REG));
-
-	/* USB2.0 PHY reference clock is 24 MHz */
+	cfgchip2 = __raw_readl(DA8XX_SYSCFG_VIRT(DA8XX_CFGCHIP2_REG));
 	cfgchip2 &= ~CFGCHIP2_REFFREQ;
 	cfgchip2 |=  CFGCHIP2_REFFREQ_24MHZ;
-
-	/*
-	 * Select internal reference clock for USB 2.0 PHY
-	 * and use it as a clock source for USB 1.1 PHY
-	 * (this is the default setting anyway).
-	 */
-	cfgchip2 &= ~CFGCHIP2_USB1PHYCLKMUX;
-	cfgchip2 |=  CFGCHIP2_USB2PHYCLKMUX;
-
-	/*
-	 * We have to override VBUS/ID signals when MUSB is configured into the
-	 * host-only mode -- ID pin will float if no cable is connected, so the
-	 * controller won't be able to drive VBUS thinking that it's a B-device.
-	 * Otherwise, we want to use the OTG mode and enable VBUS comparators.
-	 */
-	cfgchip2 &= ~CFGCHIP2_OTGMODE;
-#ifdef	CONFIG_USB_MUSB_HOST
-	cfgchip2 |=  CFGCHIP2_FORCE_HOST;
-#else
-	cfgchip2 |=  CFGCHIP2_SESENDEN | CFGCHIP2_VBDTCTEN;
-#endif
-
-	__raw_writel(cfgchip2, DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP2_REG));
+	__raw_writel(cfgchip2, DA8XX_SYSCFG_VIRT(DA8XX_CFGCHIP2_REG));
 
 	/* USB_REFCLKIN is not used. */
 	ret = davinci_cfg_reg(DA830_USB0_DRVVBUS);
 	if (ret)
 		pr_warning("%s: USB 2.0 PinMux setup failed: %d\n",
 			   __func__, ret);
-	else {
-		/*
-		 * TPS2065 switch @ 5V supplies 1 A (sustains 1.5 A),
-		 * with the power on to power good time of 3 ms.
-		 */
-		ret = da8xx_register_usb20(1000, 3);
-		if (ret)
-			pr_warning("%s: USB 2.0 registration failed: %d\n",
-				   __func__, ret);
-	}
+
+	da8xx_usb20_configure(usb_evm_data, ARRAY_SIZE(usb_evm_data));
 
 	ret = da8xx_pinmux_setup(da830_evm_usb11_pins);
 	if (ret) {

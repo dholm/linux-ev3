@@ -29,6 +29,9 @@
 #include <mach/serial.h>
 #include <mach/common.h>
 #include <mach/asp.h>
+#include <mach/usb_musb.h>
+#include <mach/usb.h>
+
 
 #include "clock.h"
 #include "mux.h"
@@ -861,6 +864,78 @@ void __init dm355_init_asp1(u32 evt_enable, struct snd_platform_data *pdata)
 
 	dm355_asp1_device.dev.platform_data = pdata;
 	platform_device_register(&dm355_asp1_device);
+}
+
+/*
+ * Configure the USB PHY for DM355 platforms.
+ */
+static int dm355_usb_phy_config(struct device *dev, u8 mode, int is_on)
+{
+	u32	deepsleep = __raw_readl(DM355_DEEPSLEEP);
+	u32	phy_ctrl = __raw_readl(USB_PHY_CTRL);
+
+	if (is_on) {
+
+		/* power everything up; start the on-chip PHY and its PLL */
+		phy_ctrl &= ~(USBPHY_OSCPDWN | USBPHY_OTGPDWN | USBPHY_PHYPDWN);
+		phy_ctrl |= USBPHY_SESNDEN | USBPHY_VBDTCTEN | USBPHY_PHYPLLON;
+		deepsleep &= ~DRVVBUS_OVERRIDE;
+		__raw_writel(deepsleep, DM355_DEEPSLEEP);
+	} else {
+		/* powerdown the on-chip PHY, its PLL, and the OTG block */
+		phy_ctrl &= ~(USBPHY_SESNDEN | USBPHY_VBDTCTEN |
+				USBPHY_PHYPLLON);
+		phy_ctrl |= USBPHY_OSCPDWN | USBPHY_OTGPDWN | USBPHY_PHYPDWN;
+	}
+
+	__raw_writel(phy_ctrl, USB_PHY_CTRL);
+
+	if (is_on) {
+		/* wait for PLL to lock before proceeding */
+		while ((__raw_readl(USB_PHY_CTRL) & USBPHY_PHYCLKGD) == 0)
+			cpu_relax();
+	}
+
+	return 0;
+}
+
+static struct resource usb_resources[] = {
+	{
+		.start	= DAVINCI_USB_OTG_BASE,
+		.end	= DAVINCI_USB_OTG_BASE + 0x5ff,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.start	= IRQ_USBINT,
+		.flags	= IORESOURCE_IRQ,
+	}
+};
+
+static struct plat_res_data dm355_usb_res;
+static struct usb_plat_data dm355_usb_plat_data;
+
+/*
+ * Initialize DM355 related USB information such as Memory maps, IRQ etc.
+ * Since DM355 supprots a single MUSB controller initialize the instance
+ * value to 1.
+ */
+void dm355_usb_configure(struct musb_hdrc_platform_data *pdata, u8 num_inst)
+{
+	pdata->phy_config = dm355_usb_phy_config;
+
+	dm355_usb_res.plat_data = pdata;
+	dm355_usb_res.res_data = usb_resources;
+	dm355_usb_res.num_res = ARRAY_SIZE(usb_resources);
+
+	dm355_usb_plat_data.prdata = &dm355_usb_res;
+	dm355_usb_plat_data.num_inst = num_inst;
+
+	/* Call the generic platform register function.  The USB
+	 * configuration w.r.t no. of ep's, capabalities etc. are common
+	 * across DaVinci platforms and hence allow the generic handler
+	 * to populate the information.
+	 */
+	setup_usb(&dm355_usb_plat_data);
 }
 
 void __init dm355_init(void)

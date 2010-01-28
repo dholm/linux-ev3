@@ -23,6 +23,7 @@
 #include <linux/phy.h>
 #include <linux/clk.h>
 #include <linux/videodev2.h>
+#include <linux/usb/musb.h>
 
 #include <media/tvp514x.h>
 
@@ -51,6 +52,8 @@
 
 #define LXT971_PHY_ID	(0x001378e2)
 #define LXT971_PHY_MASK	(0xfffffff0)
+
+static int dm644x_evm_set_vbus(struct device *dev, int is_on);
 
 static struct mtd_partition davinci_evm_norflash_partitions[] = {
 	/* bootloader (UBL, U-Boot, etc) in first 5 sectors */
@@ -475,11 +478,6 @@ evm_u35_setup(struct i2c_client *client, int gpio, unsigned ngpio, void *c)
 	gpio_request(gpio + 7, "nCF_SEL");
 	gpio_direction_output(gpio + 7, 1);
 
-	/* irlml6401 switches over 1A, in under 8 msec;
-	 * now it can be managed by nDRV_VBUS ...
-	 */
-	davinci_setup_usb(1000, 8);
-
 	return 0;
 }
 
@@ -700,6 +698,21 @@ static int davinci_phy_fixup(struct phy_device *phydev)
 #define HAS_NAND 0
 #endif
 
+static struct musb_hdrc_platform_data usb_evm_data[] = {
+	{
+#if defined(CONFIG_USB_MUSB_OTG)
+		.mode = MUSB_OTG,
+#elif defined(CONFIG_USB_MUSB_PERIPHERAL)
+		.mode =  MUSB_PERIPHERAL,
+#elif defined(CONFIG_USB_MUSB_HOST)
+		.mode = MUSB_HOST,
+#endif
+		.power = 255,
+		.potpgt = 8,
+		.set_vbus = dm644x_evm_set_vbus,
+	}
+};
+
 static __init void davinci_evm_init(void)
 {
 	struct clk *aemif_clk;
@@ -748,11 +761,38 @@ static __init void davinci_evm_init(void)
 	phy_register_fixup_for_uid(LXT971_PHY_ID, LXT971_PHY_MASK,
 					davinci_phy_fixup);
 
+	dm644x_usb_configure(usb_evm_data, ARRAY_SIZE(usb_evm_data));
 }
 
 static __init void davinci_evm_irq_init(void)
 {
 	davinci_irq_init();
+}
+
+#define GPIO_nVBUS_DRV (DAVINCI_N_GPIO + 16) /* USB VBUS line */
+static int vbus_state = -1;
+static void evm_deferred_drvvbus(struct work_struct *ignored)
+{
+	gpio_set_value_cansleep(GPIO_nVBUS_DRV, vbus_state);
+	vbus_state = !vbus_state;
+}
+
+/*
+ * DM644x EVM USB VBUS handler.  On TI DM644x EVM USB VBUS is controller
+ * through I2C expander (0x3A) lines.  Tthis function schedules a
+ * work thread to handle the actual VBUS on/off operations.
+ */
+static int dm644x_evm_set_vbus(struct device *dev, int is_on)
+{
+	static DECLARE_WORK(evm_vbus_work, evm_deferred_drvvbus);
+
+	is_on = is_on ? 1 : 0;
+	if (vbus_state == is_on)
+		return 0;
+
+	vbus_state = !is_on;
+	schedule_work(&evm_vbus_work);
+	return 0;
 }
 
 MACHINE_START(DAVINCI_EVM, "DaVinci DM644x EVM")

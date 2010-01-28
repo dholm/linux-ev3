@@ -19,6 +19,7 @@
 #include <linux/clk.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/eeprom.h>
+#include <linux/usb/musb.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -236,6 +237,21 @@ static struct spi_board_info dm355_leopard_spi_info[] __initconst = {
 	},
 };
 
+static struct musb_hdrc_platform_data usb_evm_data[] = {
+	{
+#if defined(CONFIG_USB_MUSB_OTG)
+		.mode = MUSB_OTG,
+#elif defined(CONFIG_USB_MUSB_PERIPHERAL)
+		.mode =  MUSB_PERIPHERAL,
+#elif defined(CONFIG_USB_MUSB_HOST)
+		.mode = MUSB_HOST,
+#endif
+		.power = 255,
+		.potpgt = 8,
+		.set_vbus = NULL, /* VBUS is controller by USB IP */
+	}
+};
+
 static __init void dm355_leopard_init(void)
 {
 	struct clk *aemif;
@@ -263,7 +279,7 @@ static __init void dm355_leopard_init(void)
 	gpio_request(2, "usb_id_toggle");
 	gpio_direction_output(2, USB_ID_VALUE);
 	/* irlml6401 switches over 1A in under 8 msec */
-	davinci_setup_usb(1000, 8);
+	dm355_usb_configure(usb_evm_data, ARRAY_SIZE(usb_evm_data));
 
 	davinci_setup_mmc(0, &dm355leopard_mmc_config);
 	davinci_setup_mmc(1, &dm355leopard_mmc_config);

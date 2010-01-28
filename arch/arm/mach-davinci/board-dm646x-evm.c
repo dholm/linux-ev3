@@ -31,6 +31,7 @@
 #include <linux/mtd/nand.h>
 #include <linux/mtd/partitions.h>
 #include <linux/clk.h>
+#include <linux/usb/musb.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -47,6 +48,21 @@
 
 #define NAND_BLOCK_SIZE		SZ_128K
 
+static int dm646x_evm_set_vbus(struct device *dev, int is_on);
+static struct musb_hdrc_platform_data usb_evm_data[] = {
+	{
+#if defined(CONFIG_USB_MUSB_OTG)
+		.mode = MUSB_OTG,
+#elif defined(CONFIG_USB_MUSB_PERIPHERAL)
+		.mode =  MUSB_PERIPHERAL,
+#elif defined(CONFIG_USB_MUSB_HOST)
+		.mode = MUSB_HOST,
+#endif
+		.power = 255,
+		.potpgt = 8,
+		.set_vbus = dm646x_evm_set_vbus,
+	}
+};
 /* Note: We are setting first partition as 'bootloader' constituting UBL, U-Boot
  * and U-Boot environment this avoids dependency on any particular combination
  * of UBL, U-Boot or flashing tools etc.
@@ -117,11 +133,16 @@ static struct platform_device davinci_nand_device = {
 /* CPLD Register 0 bits to control ATA */
 #define DM646X_EVM_ATA_RST		BIT(0)
 #define DM646X_EVM_ATA_PWD		BIT(1)
+#define DM646X_EVM_USB_VBUS		BIT(7)
+
+struct i2c_client *cpld_reg0_client;
 
 /* CPLD Register 0 Client: used for I/O Control */
 static int cpld_reg0_probe(struct i2c_client *client,
 			   const struct i2c_device_id *id)
 {
+	cpld_reg0_client = client;
+
 	if (HAS_ATA) {
 		u8 data;
 		struct i2c_msg msg[2] = {
@@ -740,6 +761,8 @@ static __init void evm_init(void)
 
 	soc_info->emac_pdata->phy_mask = DM646X_EVM_PHY_MASK;
 	soc_info->emac_pdata->mdio_max_freq = DM646X_EVM_MDIO_FREQUENCY;
+
+	dm646x_usb_configure(usb_evm_data, ARRAY_SIZE(usb_evm_data));
 }
 
 static __init void davinci_dm646x_evm_irq_init(void)
@@ -758,6 +781,54 @@ void __init dm646x_board_setup_refclk(struct clk *clk)
 		clk->rate = DM646X_EVM_REF_FREQ;
 }
 
+/* Initiate the I2C command to the expander to turn on/off the VBUS line */
+static int vbus_state = -1;
+static void evm_deferred_drvvbus(struct work_struct *ignored)
+{
+	u8 data;
+
+	struct i2c_msg msg[2] = {
+		{
+			.addr = cpld_reg0_client->addr,
+			.flags = I2C_M_RD,
+			.len = 1,
+			.buf = &data,
+		},
+		{
+			.addr = cpld_reg0_client->addr,
+			.flags = 0,
+			.len = 1,
+			.buf = &data,
+		},
+	};
+
+	i2c_transfer(cpld_reg0_client->adapter, msg, 1);
+	if (vbus_state)
+		data |= DM646X_EVM_USB_VBUS;
+	else
+		data &= ~DM646X_EVM_USB_VBUS;
+
+	i2c_transfer(cpld_reg0_client->adapter, msg + 1, 1);
+	vbus_state = !vbus_state;
+}
+
+/*
+ * DM644x EVM USB VBUS handler.  On TI DM644x EVM USB VBUS is controller
+ * through I2C expander (0x3A) lines.  Tthis function schedules a
+ * work thread to handle the actual VBUS on/off operations.
+ */
+static int dm646x_evm_set_vbus(struct device *dev, int is_on)
+{
+	static DECLARE_WORK(evm_vbus_work, evm_deferred_drvvbus);
+
+	is_on = is_on ? 1 : 0;
+	if (vbus_state == is_on)
+		return 0;
+
+	vbus_state = !is_on;
+	schedule_work(&evm_vbus_work);
+	return 0;
+}
 MACHINE_START(DAVINCI_DM6467_EVM, "DaVinci DM646x EVM")
 	.phys_io      = IO_PHYS,
 	.io_pg_offst  = (__IO_ADDRESS(IO_PHYS) >> 18) & 0xfffc,

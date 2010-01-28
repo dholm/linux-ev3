@@ -30,6 +30,7 @@
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/nand.h>
 #include <linux/mtd/partitions.h>
+#include <linux/usb/musb.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -138,6 +139,16 @@ static void __init davinci_sffsdr_map_io(void)
 	dm644x_init();
 }
 
+/* Only Peripheral mode supported hene populate set_vbus to NULL */
+static struct musb_hdrc_platform_data usb_evm_data[] = {
+	{
+		.mode =  MUSB_PERIPHERAL,
+		.power = 0,
+		.potpgt = 0,
+		.set_vbus = NULL,
+	}
+};
+
 static __init void davinci_sffsdr_init(void)
 {
 	struct davinci_soc_info *soc_info = &davinci_soc_info;
@@ -148,7 +159,8 @@ static __init void davinci_sffsdr_init(void)
 	davinci_serial_init(&uart_config);
 	soc_info->emac_pdata->phy_mask = SFFSDR_PHY_MASK;
 	soc_info->emac_pdata->mdio_max_freq = SFFSDR_MDIO_FREQUENCY;
-	davinci_setup_usb(0, 0); /* We support only peripheral mode. */
+
+	dm644x_usb_configure(usb_evm_data, ARRAY_SIZE(usb_evm_data));
 
 	/* mux VLYNQ pins */
 	davinci_cfg_reg(DM644X_VLYNQEN);

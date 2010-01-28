@@ -24,6 +24,7 @@
 #include <mach/pm.h>
 #include <mach/mcbsp.h>
 #include <mach/vpif.h>
+#include <linux/usb/musb.h>
 
 extern void __iomem *da8xx_syscfg0_base;
 extern void __iomem *da8xx_syscfg1_base;
@@ -66,6 +67,8 @@ extern void __iomem *da8xx_syscfg1_base;
 #define DA8XX_DDR2_CTL_BASE	0xb0000000
 #define DA8XX_ARM_RAM_BASE	0xffff0000
 #define DA8XX_VPIF_BASE		0x01e17000
+#define DA850_SATA_BASE		0x01E18000
+#define DA850_SATA_CLK_PWRDN	0x01E2C018
 
 #define PINMUX0			0x00
 #define PINMUX1			0x04
@@ -141,11 +144,15 @@ int __init da850_register_vpif_display(struct vpif_display_config
 int __init da850_register_vpif_capture(struct vpif_capture_config
 							*capture_config);
 
+int cppi41_init(void);
+int da8xx_register_sata(void);
+
 
 extern struct platform_device da8xx_serial_device;
 extern struct emac_platform_data da8xx_emac_pdata;
 extern struct da8xx_lcdc_platform_data sharp_lcd035q3dg01_pdata;
 extern struct da8xx_lcdc_platform_data sharp_lk043t1dg01_pdata;
+void da8xx_usb20_configure(struct musb_hdrc_platform_data *pdata, u8 num_inst);
 
 extern const short da830_emif25_pins[];
 extern const short da830_spi0_pins[];
@@ -189,6 +196,8 @@ extern const short da850_mcbsp0_pins[];
 extern const short da850_mcbsp1_pins[];
 extern const short da850_vpif_capture_pins[];
 extern const short da850_vpif_display_pins[];
+extern const short da850_evm_usb11_pins[];
+extern const short da850_sata_pins[];
 
 int da8xx_pinmux_setup(const short pins[]);
 

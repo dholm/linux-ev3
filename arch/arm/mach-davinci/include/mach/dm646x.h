@@ -17,6 +17,7 @@
 #include <linux/i2c.h>
 #include <linux/clk.h>
 #include <linux/davinci_emac.h>
+#include <linux/usb/musb.h>
 
 #define DM646X_EMAC_BASE		(0x01C80000)
 #define DM646X_EMAC_CNTRL_OFFSET	(0x0000)
@@ -34,6 +35,9 @@ void __init dm646x_init_mcasp1(struct snd_platform_data *pdata);
 void __init dm646x_board_setup_refclk(struct clk *clk);
 
 void dm646x_video_init(void);
+extern void dm646x_usb_configure(struct musb_hdrc_platform_data *pdata,
+					u8 num_inst);
+
 void dm646x_setup_vpif(struct vpif_display_config *,
 		       struct vpif_capture_config *);
 

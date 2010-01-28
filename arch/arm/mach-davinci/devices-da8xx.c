@@ -20,7 +20,9 @@
 #include <mach/time.h>
 #include <mach/da8xx.h>
 #include <mach/cpuidle.h>
+#include <mach/usb_musb.h>
 #include <mach/spi.h>
+#include <mach/cppi41.h>
 
 #include "clock.h"
 
@@ -38,6 +40,8 @@
 #define DA8XX_EMAC_MDIO_BASE		0x01e24000
 #define DA8XX_GPIO_BASE			0x01e26000
 #define DA8XX_I2C1_BASE			0x01e28000
+#define DA8XX_USB0_BASE			0x01e00000
+#define DA8XX_USB1_BASE			0x01e25000
 
 #define DA8XX_EMAC_CTRL_REG_OFFSET	0x3000
 #define DA8XX_EMAC_MOD_REG_OFFSET	0x2000
@@ -932,3 +936,297 @@ __init da850_init_mcbsp(struct davinci_mcbsp_platform_data *pdata)
 	return platform_device_register(pdev);
 }
 
+
+
+#ifdef CONFIG_USB_TI_CPPI41_DMA
+/* DMA block configuration */
+static const struct cppi41_tx_ch tx_ch_info[] = {
+	[0] = {
+		.port_num	= 1,
+		.num_tx_queue	= 2,
+		.tx_queue	= { { 0, 16 }, { 0, 17 } }
+	},
+	[1] = {
+		.port_num	= 2,
+		.num_tx_queue	= 2,
+		.tx_queue	= { { 0, 18 }, { 0, 19 } }
+	},
+	[2] = {
+		.port_num	= 3,
+		.num_tx_queue	= 2,
+		.tx_queue	= { { 0, 20 }, { 0, 21 } }
+	},
+	[3] = {
+		.port_num	= 4,
+		.num_tx_queue	= 2,
+		.tx_queue	= { { 0, 22 }, { 0, 23 } }
+	}
+};
+
+#define DA8XX_USB0_CFG_BASE IO_ADDRESS(DA8XX_USB0_BASE)
+const struct cppi41_dma_block cppi41_dma_block[CPPI41_NUM_DMA_BLOCK] = {
+	[0] = {
+		.global_ctrl_base  = DA8XX_USB0_CFG_BASE + 0x1000,
+		.ch_ctrl_stat_base = DA8XX_USB0_CFG_BASE + 0x1800,
+		.sched_ctrl_base  = DA8XX_USB0_CFG_BASE + 0x2000,
+		.sched_table_base = DA8XX_USB0_CFG_BASE + 0x2800,
+		.num_tx_ch        = 4,
+		.num_rx_ch        = 4,
+		.tx_ch_info       = tx_ch_info
+	}
+};
+EXPORT_SYMBOL(cppi41_dma_block);
+
+/* Queues 0 to 27 are pre-assigned, others are spare */
+static const u32 assigned_queues[] = { 0x0fffffff, 0 };
+
+
+/* Queue manager information */
+struct cppi41_queue_mgr cppi41_queue_mgr[CPPI41_NUM_QUEUE_MGR] = {
+	[0] = {
+		.q_mgr_rgn_base    = DA8XX_USB0_CFG_BASE + 0x4000,
+		.desc_mem_rgn_base = DA8XX_USB0_CFG_BASE + 0x5000,
+		.q_mgmt_rgn_base   = DA8XX_USB0_CFG_BASE + 0x6000,
+		.q_stat_rgn_base   = DA8XX_USB0_CFG_BASE + 0x6800,
+
+		.num_queue       = 64,
+		.queue_types     = CPPI41_FREE_DESC_BUF_QUEUE |
+					CPPI41_UNASSIGNED_QUEUE,
+		.base_fdbq_num    = 0,
+		.assigned       = assigned_queues
+	}
+};
+EXPORT_SYMBOL(cppi41_queue_mgr);
+
+const u8	cppi41_num_queue_mgr = 1;
+const u8	cppi41_num_dma_block = 1;
+
+/* Fair scheduling */
+u8 dma_sched_table[] = {
+	0x0, 0x80, 0x01, 0x81, 0x02, 0x82, 0x03, 0x83
+};
+
+#define USB_CPPI41_NUM_CH 4
+
+int cppi41_init(void)
+{
+	u16 numch, order;
+	u8 q_mgr, dma_num = 0;
+
+	for (q_mgr = 0; q_mgr < CPPI41_NUM_QUEUE_MGR; ++q_mgr) {
+		/* Allocate memory for region 0 */
+		cppi41_queue_mgr[q_mgr].ptr_rgn0 = dma_alloc_coherent(NULL,
+						USB_CPPI41_QMGR_REG0_MAX_SIZE,
+						&cppi41_queue_mgr[q_mgr].
+						phys_ptr_rgn0,
+						GFP_KERNEL | GFP_DMA);
+		/* Initialize Queue Manager 0, alloc for region 0 */
+		cppi41_queue_mgr_init(q_mgr,
+			cppi41_queue_mgr[q_mgr].phys_ptr_rgn0,
+			USB_CPPI41_QMGR_REG0_ALLOC_SIZE);
+
+		numch =  USB_CPPI41_NUM_CH * 2;
+		order = get_count_order(numch);
+
+		if (order < 5)
+			order = 5;
+
+		cppi41_dma_block_init(dma_num, q_mgr, order,
+			dma_sched_table, numch);
+	}
+	return 0;
+}
+EXPORT_SYMBOL(cppi41_init);
+
+void cppi41_deinit(void)
+{
+	u8 q_mgr = 0, dma_block = 0;
+
+	for (q_mgr = 0; q_mgr < CPPI41_NUM_QUEUE_MGR; ++q_mgr) {
+		/* deinit dma block */
+		cppi41_dma_block_deinit(dma_block, q_mgr);
+
+		/* deinit queue manager */
+		cppi41_queue_mgr_deinit(q_mgr);
+
+		/* free the allocated region0 memory */
+		dma_free_coherent(NULL, USB_CPPI41_QMGR_REG0_MAX_SIZE,
+			cppi41_queue_mgr[q_mgr].ptr_rgn0,
+			cppi41_queue_mgr[q_mgr].phys_ptr_rgn0);
+
+		cppi41_queue_mgr[q_mgr].phys_ptr_rgn0 = 0;
+		cppi41_queue_mgr[q_mgr].ptr_rgn0 = 0;
+	}
+}
+EXPORT_SYMBOL(cppi41_deinit);
+#endif
+
+static struct resource da850_ahci_resources[] = {
+	{
+		.start	=	DA850_SATA_BASE,
+		.end	=	DA850_SATA_BASE + 0x1fff,
+		.flags	=	IORESOURCE_MEM,
+	},
+	{
+		.start	=	IRQ_DA850_SATAINT,
+		.flags	=	IORESOURCE_IRQ,
+	}
+};
+
+static int da850_ahci_data = 8;
+static struct platform_device da850_ahci_device = {
+	.name	=	"ahci",
+	.id	=	-1,
+	.dev	=	{
+				.platform_data = &da850_ahci_data,
+				.coherent_dma_mask = 0xffffffff,
+			},
+	.num_resources = ARRAY_SIZE(da850_ahci_resources),
+	.resource	= da850_ahci_resources,
+};
+
+int __init da8xx_register_sata(void)
+{
+	return platform_device_register(&da850_ahci_device);
+}
+
+#define CFGCHIP2	DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP2_REG)
+/*
+ * Configure the USB PHY for DA8xx platforms.
+ */
+static int da8xx_usb_phy_config(struct device *dev, u8 mode, int is_on)
+{
+	u32 cfgchip2;
+
+	/*
+	 * Start the on-chip PHY and its PLL.
+	 */
+	cfgchip2 = __raw_readl(CFGCHIP2);
+
+	if (is_on) {
+		/* Check whether USB0 PHY is already powered on */
+		if (cfgchip2 & CFGCHIP2_PHY_PLLON)
+			return 0;
+
+		cfgchip2 &= ~(CFGCHIP2_RESET | CFGCHIP2_PHYPWRDN |
+				CFGCHIP2_OTGPWRDN | CFGCHIP2_OTGMODE |
+				CFGCHIP2_REFFREQ);
+		cfgchip2 |= CFGCHIP2_SESENDEN | CFGCHIP2_VBDTCTEN |
+				CFGCHIP2_PHY_PLLON | CFGCHIP2_REFFREQ_24MHZ;
+		switch (mode) {
+		case MUSB_OTG:
+		case MUSB_DUAL_ROLE:
+			cfgchip2 |= CFGCHIP2_NO_OVERRIDE;
+			break;
+		case MUSB_HOST:
+			cfgchip2 |= CFGCHIP2_FORCE_HOST;
+			break;
+		case MUSB_PERIPHERAL:
+			cfgchip2 |= CFGCHIP2_FORCE_DEVICE;
+			break;
+		default:
+			pr_err("Trying to set unsupported mode");
+			break;
+		}
+	} else {
+		/* Ensure that usb1.1 interface clk is not being sourced from
+		 * usb0 interface.  If so do not power down usb0 PHY
+		 */
+		if ((cfgchip2 & CFGCHIP2_USB1SUSPENDM) &&
+			!(cfgchip2 & CFGCHIP2_USB1PHYCLKMUX)) {
+			printk(KERN_WARNING "USB1 interface active -\
+				Cannot Power down USB0 PHY\n");
+			return 0;
+		}
+
+		cfgchip2 &= ~CFGCHIP2_PHY_PLLON;
+		cfgchip2 |= CFGCHIP2_PHYPWRDN | CFGCHIP2_OTGPWRDN;
+	}
+
+	__raw_writel(cfgchip2, CFGCHIP2);
+
+	if (is_on) {
+		while (!(__raw_readl(CFGCHIP2) & CFGCHIP2_PHYCLKGD))
+			cpu_relax();
+		pr_info("Waiting for USB PHY clock good...\n");
+	}
+
+	return 0;
+}
+
+static struct resource usb_resources[] = {
+	{
+		.start  = DA8XX_USB0_BASE,
+		.end    = DA8XX_USB0_BASE + 0x5ff,
+		.flags  = IORESOURCE_MEM,
+	},
+	{
+		.start  = IRQ_DA8XX_USB_INT,
+		.flags  = IORESOURCE_IRQ,
+	},
+};
+
+static struct plat_res_data da8xx_usb_res;
+static struct usb_plat_data da8xx_usb_plat_data;
+
+/*
+ * Initialize DA8xx related MUSB information such as Memory maps, IRQ etc.
+ * Since DA8xx supprot a single MUSB controller initialize the instance
+ * value to 1.
+ */
+void da8xx_usb20_configure(struct musb_hdrc_platform_data *pdata, u8 num_inst)
+{
+	pdata->phy_config = da8xx_usb_phy_config;
+
+	da8xx_usb_res.plat_data = pdata;
+	da8xx_usb_res.res_data = usb_resources;
+	da8xx_usb_res.num_res = ARRAY_SIZE(usb_resources);
+
+	da8xx_usb_plat_data.prdata = &da8xx_usb_res;
+	da8xx_usb_plat_data.num_inst = num_inst;
+
+	/* There are multiple USB instances on DA8xx platform hence populate
+	 * the clock information accordingly.  This overrides the generic
+	 * clock setting done in usb.c file.
+	 */
+	pdata->clock = "usb20";
+
+	/* Call the generic platform register function.  The USB
+	 * configuration w.r.t no. of ep's, capabalities etc. are common
+	 * across DA8xx/OMAPL13x platforms and hence allow the generic handler
+	 * to populate the information.
+	 */
+	setup_usb(&da8xx_usb_plat_data);
+}
+
+static struct resource da8xx_usb11_resources[] = {
+	[0] = {
+		.start	= DA8XX_USB1_BASE,
+		.end	= DA8XX_USB1_BASE + SZ_4K - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	[1] = {
+		.start	= IRQ_DA8XX_IRQN,
+		.end	= IRQ_DA8XX_IRQN,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+static u64 da8xx_usb11_dma_mask = DMA_BIT_MASK(32);
+
+static struct platform_device da8xx_usb11_device = {
+	.name		= "ohci",
+	.id			= 0,
+	.dev = {
+		.dma_mask		= &da8xx_usb11_dma_mask,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
+	},
+	.num_resources	= ARRAY_SIZE(da8xx_usb11_resources),
+	.resource	= da8xx_usb11_resources,
+};
+
+int __init da8xx_register_usb11(struct da8xx_ohci_root_hub *pdata)
+{
+	da8xx_usb11_device.dev.platform_data = pdata;
+	return platform_device_register(&da8xx_usb11_device);
+}

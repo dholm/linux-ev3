@@ -366,6 +366,27 @@ static struct clk vpif_clk = {
 	.flags		= ALWAYS_ENABLED,
 };
 
+static struct clk usb11_clk = {
+	.name		= "usb11",
+	.parent		= &pll0_sysclk4,
+	.lpsc		= DA8XX_LPSC1_USB11,
+	.gpsc		= 1,
+};
+
+static struct clk usb20_clk = {
+	.name		= "usb20",
+	.parent		= &pll0_sysclk2,
+	.lpsc		= DA8XX_LPSC1_USB20,
+	.gpsc		= 1,
+};
+
+
+static struct clk sata_clk = {
+	.name		= "ahci",
+	.parent		= &pll0_sysclk2,
+	.lpsc		= DA850_LPSC1_SATA,
+	.gpsc		= 1,
+};
 static struct clk_lookup da850_clks[] = {
 	CLK(NULL,		"ref",		&ref_clk),
 	CLK(NULL,		"pll0",		&pll0_clk),
@@ -411,6 +432,10 @@ static struct clk_lookup da850_clks[] = {
 	CLK("davinci-mcbsp.0",	NULL,		&mcbsp0_clk),
 	CLK("davinci-mcbsp.1",	NULL,		&mcbsp1_clk),
 	CLK(NULL, 		"vpif",		&vpif_clk),
+	CLK(NULL,		"usb11",	&usb11_clk),
+	CLK(NULL,		"usb20",	&usb20_clk),
+	CLK(NULL,		"ahci",		&sata_clk),
+
 	CLK(NULL,		NULL,		NULL),
 };
 
@@ -580,6 +605,9 @@ static const struct mux_config da850_pins[] = {
 	MUX_CFG(DA850, GPIO4_1,		10,	24,	15,	8,	false)
 	MUX_CFG(DA850, RTC_ALARM,	0,	28,	15,	2,	false)
 	MUX_CFG(DA850, GPIO7_4,		17,	20,	15,	8,	false)
+	MUX_CFG(DA850, GPIO2_4,		6,	12,	15,	8,	false)
+	MUX_CFG(DA850, GPIO6_13,	13,	8,	15,	8,	false)
+
 	/* McBSP0 function */
 	MUX_CFG(DA850,	MCBSP0_CLKR,	2,	4,	15,	2,	false)
 	MUX_CFG(DA850,	MCBSP0_CLKX,	2,	8,	15,	2,	false)
@@ -763,6 +791,14 @@ const short da850_vpif_display_pins[] __initdata = {
 	DA850_VPIF_DOUT11, DA850_VPIF_DOUT12, DA850_VPIF_DOUT13,
 	DA850_VPIF_DOUT14, DA850_VPIF_DOUT15, DA850_VPIF_CLKO2,
 	DA850_VPIF_CLKO3,
+	-1
+};
+
+const short da850_evm_usb11_pins[] __initdata = {
+	DA850_GPIO2_4, DA850_GPIO6_13, -1
+};
+
+const short da850_sata_pins[] __initdata = {
 	-1
 };
 

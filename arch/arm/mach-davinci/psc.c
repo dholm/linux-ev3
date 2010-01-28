@@ -65,6 +65,9 @@ void davinci_psc_config(unsigned int domain, unsigned int ctlr,
 	mdctl = __raw_readl(psc_base + MDCTL + 4 * id);
 	mdctl &= ~MDSTAT_STATE_MASK;
 	mdctl |= next_state;
+	/* For SATA force the domain turn on */
+	if (cpu_is_davinci_da850() && (id == 8) && (ctlr == 1))
+		mdctl |= 0x80000000;
 	__raw_writel(mdctl, psc_base + MDCTL + 4 * id);
 
 	pdstat = __raw_readl(psc_base + PDSTAT);
