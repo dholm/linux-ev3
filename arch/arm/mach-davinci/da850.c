@@ -369,7 +369,6 @@ static struct clk vpif_clk = {
 	.parent		= &pll0_sysclk2,
 	.lpsc		= DA850_LPSC1_VPIF,
 	.gpsc		= 1,
-	.flags		= ALWAYS_ENABLED,
 };
 
 static struct clk usb11_clk = {
