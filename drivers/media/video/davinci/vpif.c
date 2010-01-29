@@ -290,10 +290,34 @@ static int __devexit vpif_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
+static int vpif_suspend(struct device *dev)
+{
+	clk_disable(vpif_clk);
+	return 0;
+}
+
+static int vpif_resume(struct device *dev)
+{
+	clk_enable(vpif_clk);
+	return 0;
+}
+
+static struct dev_pm_ops vpif_pm = {
+	.suspend        = vpif_suspend,
+	.resume         = vpif_resume,
+};
+
+#define vpif_pm_ops (&vpif_pm)
+#else
+#define vpif_pm_ops NULL
+#endif
+
 static struct platform_driver vpif_driver = {
 	.driver = {
 		.name	= "vpif",
 		.owner = THIS_MODULE,
+		.pm	= vpif_pm_ops,
 	},
 	.remove = __devexit_p(vpif_remove),
 	.probe = vpif_probe,
