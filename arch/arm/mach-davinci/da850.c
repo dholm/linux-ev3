@@ -1101,7 +1101,7 @@ static const struct da850_opp da850_opp_96 = {
 	.prediv		= 1,
 	.mult		= 20,
 	.postdiv	= 5,
-	.cvdd_min	= 950000,
+	.cvdd_min	= 1000000,
 	.cvdd_max	= 1050000,
 };
 
