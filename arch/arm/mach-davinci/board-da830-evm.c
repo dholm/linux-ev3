@@ -131,10 +131,10 @@ static __init void da830_evm_usb_init(void)
 	/*
 	 * Setup the Ref. clock frequency for the EVM at 24 MHz.
 	 */
-	cfgchip2 = __raw_readl(DA8XX_SYSCFG_VIRT(DA8XX_CFGCHIP2_REG));
+	cfgchip2 = __raw_readl(DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP2_REG));
 	cfgchip2 &= ~CFGCHIP2_REFFREQ;
 	cfgchip2 |=  CFGCHIP2_REFFREQ_24MHZ;
-	__raw_writel(cfgchip2, DA8XX_SYSCFG_VIRT(DA8XX_CFGCHIP2_REG));
+	__raw_writel(cfgchip2, DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP2_REG));
 
 	/* USB_REFCLKIN is not used. */
 	ret = davinci_cfg_reg(DA830_USB0_DRVVBUS);
