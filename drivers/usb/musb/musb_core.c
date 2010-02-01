@@ -214,6 +214,10 @@ static inline void musb_fifo_read_unaligned(void __iomem *fifo,
 		memcpy(buf, &val, len);
 	}
 }
+#ifdef CONFIG_ARCH_DAVINCI_DA8XX
+#define cpu_is_omap3517() 0
+#define cpu_is_omap3505() 0
+#endif
 
 /*
  * Unload an endpoint's FIFO

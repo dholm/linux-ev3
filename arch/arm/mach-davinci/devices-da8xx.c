@@ -22,7 +22,6 @@
 #include <mach/cpuidle.h>
 #include <mach/usb_musb.h>
 #include <mach/spi.h>
-#include <mach/cppi41.h>
 
 #include "clock.h"
 
@@ -50,7 +49,9 @@
 #define DA8XX_EMAC_CTRL_RAM_SIZE	SZ_8K
 
 void __iomem *da8xx_syscfg0_base;
+EXPORT_SYMBOL(da8xx_syscfg0_base);
 void __iomem *da8xx_syscfg1_base;
+EXPORT_SYMBOL(da8xx_syscfg1_base);
 
 static struct plat_serial8250_port da8xx_serial_pdata[] = {
 	{
@@ -935,131 +936,6 @@ __init da850_init_mcbsp(struct davinci_mcbsp_platform_data *pdata)
 	pdev->dev.platform_data = pdata;
 	return platform_device_register(pdev);
 }
-
-
-
-#ifdef CONFIG_USB_TI_CPPI41_DMA
-/* DMA block configuration */
-static const struct cppi41_tx_ch tx_ch_info[] = {
-	[0] = {
-		.port_num	= 1,
-		.num_tx_queue	= 2,
-		.tx_queue	= { { 0, 16 }, { 0, 17 } }
-	},
-	[1] = {
-		.port_num	= 2,
-		.num_tx_queue	= 2,
-		.tx_queue	= { { 0, 18 }, { 0, 19 } }
-	},
-	[2] = {
-		.port_num	= 3,
-		.num_tx_queue	= 2,
-		.tx_queue	= { { 0, 20 }, { 0, 21 } }
-	},
-	[3] = {
-		.port_num	= 4,
-		.num_tx_queue	= 2,
-		.tx_queue	= { { 0, 22 }, { 0, 23 } }
-	}
-};
-
-#define DA8XX_USB0_CFG_BASE IO_ADDRESS(DA8XX_USB0_BASE)
-const struct cppi41_dma_block cppi41_dma_block[CPPI41_NUM_DMA_BLOCK] = {
-	[0] = {
-		.global_ctrl_base  = DA8XX_USB0_CFG_BASE + 0x1000,
-		.ch_ctrl_stat_base = DA8XX_USB0_CFG_BASE + 0x1800,
-		.sched_ctrl_base  = DA8XX_USB0_CFG_BASE + 0x2000,
-		.sched_table_base = DA8XX_USB0_CFG_BASE + 0x2800,
-		.num_tx_ch        = 4,
-		.num_rx_ch        = 4,
-		.tx_ch_info       = tx_ch_info
-	}
-};
-EXPORT_SYMBOL(cppi41_dma_block);
-
-/* Queues 0 to 27 are pre-assigned, others are spare */
-static const u32 assigned_queues[] = { 0x0fffffff, 0 };
-
-
-/* Queue manager information */
-struct cppi41_queue_mgr cppi41_queue_mgr[CPPI41_NUM_QUEUE_MGR] = {
-	[0] = {
-		.q_mgr_rgn_base    = DA8XX_USB0_CFG_BASE + 0x4000,
-		.desc_mem_rgn_base = DA8XX_USB0_CFG_BASE + 0x5000,
-		.q_mgmt_rgn_base   = DA8XX_USB0_CFG_BASE + 0x6000,
-		.q_stat_rgn_base   = DA8XX_USB0_CFG_BASE + 0x6800,
-
-		.num_queue       = 64,
-		.queue_types     = CPPI41_FREE_DESC_BUF_QUEUE |
-					CPPI41_UNASSIGNED_QUEUE,
-		.base_fdbq_num    = 0,
-		.assigned       = assigned_queues
-	}
-};
-EXPORT_SYMBOL(cppi41_queue_mgr);
-
-const u8	cppi41_num_queue_mgr = 1;
-const u8	cppi41_num_dma_block = 1;
-
-/* Fair scheduling */
-u8 dma_sched_table[] = {
-	0x0, 0x80, 0x01, 0x81, 0x02, 0x82, 0x03, 0x83
-};
-
-#define USB_CPPI41_NUM_CH 4
-
-int cppi41_init(void)
-{
-	u16 numch, order;
-	u8 q_mgr, dma_num = 0;
-
-	for (q_mgr = 0; q_mgr < CPPI41_NUM_QUEUE_MGR; ++q_mgr) {
-		/* Allocate memory for region 0 */
-		cppi41_queue_mgr[q_mgr].ptr_rgn0 = dma_alloc_coherent(NULL,
-						USB_CPPI41_QMGR_REG0_MAX_SIZE,
-						&cppi41_queue_mgr[q_mgr].
-						phys_ptr_rgn0,
-						GFP_KERNEL | GFP_DMA);
-		/* Initialize Queue Manager 0, alloc for region 0 */
-		cppi41_queue_mgr_init(q_mgr,
-			cppi41_queue_mgr[q_mgr].phys_ptr_rgn0,
-			USB_CPPI41_QMGR_REG0_ALLOC_SIZE);
-
-		numch =  USB_CPPI41_NUM_CH * 2;
-		order = get_count_order(numch);
-
-		if (order < 5)
-			order = 5;
-
-		cppi41_dma_block_init(dma_num, q_mgr, order,
-			dma_sched_table, numch);
-	}
-	return 0;
-}
-EXPORT_SYMBOL(cppi41_init);
-
-void cppi41_deinit(void)
-{
-	u8 q_mgr = 0, dma_block = 0;
-
-	for (q_mgr = 0; q_mgr < CPPI41_NUM_QUEUE_MGR; ++q_mgr) {
-		/* deinit dma block */
-		cppi41_dma_block_deinit(dma_block, q_mgr);
-
-		/* deinit queue manager */
-		cppi41_queue_mgr_deinit(q_mgr);
-
-		/* free the allocated region0 memory */
-		dma_free_coherent(NULL, USB_CPPI41_QMGR_REG0_MAX_SIZE,
-			cppi41_queue_mgr[q_mgr].ptr_rgn0,
-			cppi41_queue_mgr[q_mgr].phys_ptr_rgn0);
-
-		cppi41_queue_mgr[q_mgr].phys_ptr_rgn0 = 0;
-		cppi41_queue_mgr[q_mgr].ptr_rgn0 = 0;
-	}
-}
-EXPORT_SYMBOL(cppi41_deinit);
-#endif
 
 static struct resource da850_ahci_resources[] = {
 	{

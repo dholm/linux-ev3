@@ -273,6 +273,7 @@ static inline bool gadget_supports_altsettings(struct usb_gadget *gadget)
 	return true;
 }
 
+#define  cpu_is_omap3630() 0
 /**
  * gadget_dma32 - return true if we want buffer aligned on 32 bits (for dma)
  * @gadget: the gadget in question

@@ -10,7 +10,7 @@ ifeq ($(CONFIG_ARCH_DAVINCI_DMx),y)
 	musb_hdrc-objs	+= davinci.o
 endif
 
-ifeq ($(CONFIG_ARCH_DAVINCI_DA830),y)
+ifeq ($(CONFIG_ARCH_DAVINCI_DA8XX),y)
 	musb_hdrc-objs	+= da830.o
 endif
 

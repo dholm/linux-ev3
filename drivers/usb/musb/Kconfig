@@ -179,7 +179,7 @@ config USB_TI_CPPI_DMA
 config USB_TI_CPPI41_DMA
 	bool
 	depends on USB_MUSB_HDRC && !MUSB_PIO_ONLY
-	default ARCH_DAVINCI_DA830 || MACH_OMAP3517EVM
+	default ARCH_DAVINCI_DA8XX || MACH_OMAP3517EVM
 	select CPPI41
 	help
 	 Enable DMA transfers when TI CPPI 4.1 DMA is available.
