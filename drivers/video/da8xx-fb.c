@@ -238,8 +238,8 @@ static void lcd_blit(int load_mode, struct da8xx_fb_par *par)
 	lcdc_write(reg, LCD_RASTER_CTRL_REG);
 }
 
-/* Configure the Burst Size of DMA */
-static int lcd_cfg_dma(int burst_size)
+/* Configure the Burst Size and fifo threhold of DMA */
+static int lcd_cfg_dma(int burst_size,  int fifo_th)
 {
 	u32 reg;
 
@@ -263,6 +263,9 @@ static int lcd_cfg_dma(int burst_size)
 	default:
 		return -EINVAL;
 	}
+
+	reg |= (fifo_th << 8);
+
 	lcdc_write(reg, LCD_DMA_CTRL_REG);
 
 	return 0;
@@ -498,8 +501,8 @@ static int lcd_init(struct da8xx_fb_par *par, const struct lcd_ctrl_config *cfg,
 		lcdc_write((lcdc_read(LCD_RASTER_TIMING_2_REG) &
 			~LCD_INVERT_PIXEL_CLOCK), LCD_RASTER_TIMING_2_REG);
 
-	/* Configure the DMA burst size. */
-	ret = lcd_cfg_dma(cfg->dma_burst_sz);
+	/* Configure the DMA burst size and fifo threshold. */
+	ret = lcd_cfg_dma(cfg->dma_burst_sz, cfg->fifo_th);
 	if (ret < 0)
 		return ret;
 
@@ -540,12 +543,15 @@ static int lcd_init(struct da8xx_fb_par *par, const struct lcd_ctrl_config *cfg,
 
 static irqreturn_t lcdc_irq_handler(int irq, void *arg)
 {
+	struct da8xx_fb_par *par = arg;
 	u32 stat = lcdc_read(LCD_STAT_REG);
 
 	if ((stat & LCD_SYNC_LOST) && (stat & LCD_FIFO_UNDERFLOW)) {
 		lcd_disable_raster();
+		clk_disable(par->lcdc_clk);
 		lcdc_write(stat, LCD_STAT_REG);
 		lcd_enable_raster();
+		clk_enable(par->lcdc_clk);
 	} else
 		lcdc_write(stat, LCD_STAT_REG);
 
