@@ -279,29 +279,36 @@ static const short da830_evm_emif25_pins[] = {
 
 #ifdef CONFIG_DA830_UI_NAND
 static struct mtd_partition da830_evm_nand_partitions[] = {
-	/* bootloader (U-Boot, etc) in first sector */
+	/* bootloader params in the first sector */
 	[0] = {
-		.name		= "bootloader",
+		.name		= "u-boot env",
 		.offset		= 0,
 		.size		= SZ_128K,
 		.mask_flags	= MTD_WRITEABLE,	/* force read-only */
 	},
-	/* bootloader params in the next sector */
+	/* primary bootloader in the next sector */
 	[1] = {
-		.name		= "params",
+		.name		= "UBL",
 		.offset		= MTDPART_OFS_APPEND,
 		.size		= SZ_128K,
 		.mask_flags	= MTD_WRITEABLE,	/* force read-only */
 	},
-	/* kernel */
+	/* bootloader (U-Boot, etc) in next sector */
 	[2] = {
+		.name		= "u-boot",
+		.offset		= MTDPART_OFS_APPEND,
+		.size		= 4 * SZ_128K,
+		.mask_flags	= MTD_WRITEABLE,	/* force read-only */
+	},
+	/* kernel */
+	[3] = {
 		.name		= "kernel",
 		.offset		= MTDPART_OFS_APPEND,
 		.size		= SZ_2M,
 		.mask_flags	= 0,
 	},
 	/* file system */
-	[3] = {
+	[4] = {
 		.name		= "filesystem",
 		.offset		= MTDPART_OFS_APPEND,
 		.size		= MTDPART_SIZ_FULL,
