@@ -53,6 +53,9 @@ extern void usb_nop_xceiv_register(void);
 #define DA830_TX_INTR_MASK	(DA830_TX_EP_MASK << USB_INTR_TX_SHIFT)
 #define DA830_RX_INTR_MASK	(DA830_RX_EP_MASK << USB_INTR_RX_SHIFT)
 
+#define DA830_USB_INTR_USB_SHIFT      16
+#define DA830_USB_INTR_USB_MASK       (0x1ff << DA830_USB_INTR_USB_SHIFT)
+
 #define A_WAIT_BCON_TIMEOUT	1100		/* in ms */
 
 #define CFGCHIP2		DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP2_REG)
@@ -388,7 +391,7 @@ static void otg_timer(unsigned long _musb)
 	}
 	spin_unlock_irqrestore(&musb->lock, flags);
 }
-#if 0
+
 void musb_platform_try_idle(struct musb *musb, unsigned long timeout)
 {
 	static unsigned long last_timer;
@@ -418,7 +421,7 @@ void musb_platform_try_idle(struct musb *musb, unsigned long timeout)
 	    otg_state_string(musb), jiffies_to_msecs(timeout - jiffies));
 	mod_timer(&otg_workaround, timeout);
 }
-#endif
+
 static irqreturn_t da830_interrupt(int irq, void *hci)
 {
 	struct musb  *musb = hci;
@@ -468,7 +471,8 @@ static irqreturn_t da830_interrupt(int irq, void *hci)
 
 	musb->int_rx = (status & DA830_RX_INTR_MASK) >> USB_INTR_RX_SHIFT;
 	musb->int_tx = (status & DA830_TX_INTR_MASK) >> USB_INTR_TX_SHIFT;
-	musb->int_usb = (status & USB_INTR_USB_MASK) >> USB_INTR_USB_SHIFT;
+	musb->int_usb = (status & DA830_USB_INTR_USB_MASK) >>
+				DA830_USB_INTR_USB_SHIFT;
 
 	/*
 	 * DRVVBUS IRQs are the only proxy we have (a very poor one!) for
@@ -503,7 +507,6 @@ static irqreturn_t da830_interrupt(int irq, void *hci)
 			mod_timer(&otg_workaround, jiffies + POLL_SECONDS * HZ);
 			WARNING("VBUS error workaround (delay coming)\n");
 		} else if (is_host_enabled(musb) && drvvbus) {
-			musb->is_active = 1;
 			MUSB_HST_MODE(musb);
 			musb->xceiv->default_a = 1;
 			musb->xceiv->state = OTG_STATE_A_WAIT_VRISE;

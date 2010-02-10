@@ -415,7 +415,7 @@ void musb_hnp_stop(struct musb *musb)
 
 #define STAGE0_MASK (MUSB_INTR_RESUME | MUSB_INTR_SESSREQ \
 		| MUSB_INTR_VBUSERROR | MUSB_INTR_CONNECT \
-		| MUSB_INTR_RESET)
+		| MUSB_INTR_RESET | MUSB_INTR_SUSPEND)
 
 static irqreturn_t musb_stage0_irq(struct musb *musb, u8 int_usb,
 				u8 devctl, u8 power)
