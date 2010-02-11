@@ -11,7 +11,7 @@ ifeq ($(CONFIG_ARCH_DAVINCI_DMx),y)
 endif
 
 ifeq ($(CONFIG_ARCH_DAVINCI_DA8XX),y)
-	musb_hdrc-objs	+= da830.o
+	musb_hdrc-objs	+= da8xx.o
 endif
 
 ifeq ($(CONFIG_USB_TUSB6010),y)

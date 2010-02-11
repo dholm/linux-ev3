@@ -35,13 +35,12 @@
 #include <mach/da8xx.h>
 
 #include "musb_core.h"
+#include "da8xx.h"
 
 #ifdef CONFIG_USB_TI_CPPI41_DMA
 #include "cppi41.h"
 #include "cppi41_dma.h"
 #endif
-
-extern void usb_nop_xceiv_register(void);
 
 /*
  * DA830 specific definitions
@@ -255,7 +254,7 @@ static inline void phy_off(void)
 	 */
 	if ((cfgchip2 & CFGCHIP2_USB1SUSPENDM) &&
 		!(cfgchip2 & CFGCHIP2_USB1PHYCLKMUX)) {
-		printk ( KERN_WARNING "USB1 interface active - Cannot Power down USB0 PHY\n");
+		printk(KERN_WARNING "USB1 interface active - Cannot Power down USB0 PHY\n");
 		return;
 	}
 
@@ -422,7 +421,7 @@ void musb_platform_try_idle(struct musb *musb, unsigned long timeout)
 	mod_timer(&otg_workaround, timeout);
 }
 
-static irqreturn_t da830_interrupt(int irq, void *hci)
+static irqreturn_t da8xx_interrupt(int irq, void *hci)
 {
 	struct musb  *musb = hci;
 	void __iomem *reg_base = musb->ctrl_base;
@@ -441,6 +440,7 @@ static irqreturn_t da830_interrupt(int irq, void *hci)
 	 * CPPI 4.1 interrupts share the same IRQ and the EOI register but
 	 * don't get reflected in the interrupt source/mask registers.
 	 */
+#ifdef CONFIG_USB_TI_CPPI41_DMA
 	if (is_cppi41_enabled()) {
 		/*
 		 * Check for the interrupts from Tx/Rx completion queues; they
@@ -460,6 +460,7 @@ static irqreturn_t da830_interrupt(int irq, void *hci)
 			ret = IRQ_HANDLED;
 		}
 	}
+#endif
 
 	/* Acknowledge and handle non-CPPI interrupts */
 	status = musb_readl(reg_base, USB_INTR_SRC_MASKED_REG);
@@ -641,7 +642,7 @@ int __init musb_platform_init(struct musb *musb)
 		 musb_readb(reg_base, USB_CTRL_REG));
 
 	musb->a_wait_bcon = A_WAIT_BCON_TIMEOUT;
-	musb->isr = da830_interrupt;
+	musb->isr = da8xx_interrupt;
 	return 0;
 }
 
@@ -676,7 +677,7 @@ int musb_platform_exit(struct musb *musb)
 	}
 done:
 	phy_off();
-	otg_put_transceiver (musb->xceiv);
+	otg_put_transceiver(musb->xceiv);
 	usb_nop_xceiv_unregister();
 
 	return 0;
