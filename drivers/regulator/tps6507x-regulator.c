@@ -113,46 +113,13 @@ struct tps_pmic {
 	struct mutex io_lock;
 };
 
-static inline int tps6507x_pmic_read(struct tps_pmic *tps, u8 reg)
-{
-	return i2c_smbus_read_byte_data(tps->client, reg);
-}
-
-static inline int tps6507x_pmic_write(struct tps_pmic *tps, u8 reg, u8 val)
-{
-	return i2c_smbus_write_byte_data(tps->client, reg, val);
-}
-
-static int tps6507x_pmic_set_bits(struct tps_pmic *tps, u8 reg, u8 mask)
+static int tps6507x_pmic_modify_bits(struct tps_pmic *tps, u8 reg, u8 mask, u8 val)
 {
 	int err, data;
 
 	mutex_lock(&tps->io_lock);
 
-	data = tps6507x_pmic_read(tps, reg);
-	if (data < 0) {
-		dev_err(&tps->client->dev, "Read from reg 0x%x failed\n", reg);
-		err = data;
-		goto out;
-	}
-
-	data |= mask;
-	err = tps6507x_pmic_write(tps, reg, data);
-	if (err)
-		dev_err(&tps->client->dev, "Write for reg 0x%x failed\n", reg);
-
-out:
-	mutex_unlock(&tps->io_lock);
-	return err;
-}
-
-static int tps6507x_pmic_clear_bits(struct tps_pmic *tps, u8 reg, u8 mask)
-{
-	int err, data;
-
-	mutex_lock(&tps->io_lock);
-
-	data = tps6507x_pmic_read(tps, reg);
+	data =  i2c_smbus_read_byte_data(tps->client, reg);
 	if (data < 0) {
 		dev_err(&tps->client->dev, "Read from reg 0x%x failed\n", reg);
 		err = data;
@@ -160,7 +127,8 @@ static int tps6507x_pmic_clear_bits(struct tps_pmic *tps, u8 reg, u8 mask)
 	}
 
 	data &= ~mask;
-	err = tps6507x_pmic_write(tps, reg, data);
+	data |= val;
+	err =  i2c_smbus_write_byte_data(tps->client, reg, data);
 	if (err)
 		dev_err(&tps->client->dev, "Write for reg 0x%x failed\n", reg);
 
@@ -175,7 +143,7 @@ static int tps6507x_pmic_reg_read(struct tps_pmic *tps, u8 reg)
 
 	mutex_lock(&tps->io_lock);
 
-	data = tps6507x_pmic_read(tps, reg);
+	data = i2c_smbus_read_byte_data(tps->client, reg);
 	if (data < 0)
 		dev_err(&tps->client->dev, "Read from reg 0x%x failed\n", reg);
 
@@ -183,19 +151,6 @@ static int tps6507x_pmic_reg_read(struct tps_pmic *tps, u8 reg)
 	return data;
 }
 
-static int tps6507x_pmic_reg_write(struct tps_pmic *tps, u8 reg, u8 val)
-{
-	int err;
-
-	mutex_lock(&tps->io_lock);
-
-	err = tps6507x_pmic_write(tps, reg, val);
-	if (err < 0)
-		dev_err(&tps->client->dev, "Write for reg 0x%x failed\n", reg);
-
-	mutex_unlock(&tps->io_lock);
-	return err;
-}
 
 static int tps6507x_pmic_dcdc_is_enabled(struct regulator_dev *dev)
 {
@@ -243,7 +198,8 @@ static int tps6507x_pmic_dcdc_enable(struct regulator_dev *dev)
 		return -EINVAL;
 
 	shift = TPS6507X_MAX_REG_ID - dcdc;
-	return tps6507x_pmic_set_bits(tps, TPS6507X_REG_CON_CTRL1, 1 << shift);
+	return tps6507x_pmic_modify_bits(tps, TPS6507X_REG_CON_CTRL1, 0,
+					 1 << shift);
 }
 
 static int tps6507x_pmic_dcdc_disable(struct regulator_dev *dev)
@@ -256,8 +212,8 @@ static int tps6507x_pmic_dcdc_disable(struct regulator_dev *dev)
 		return -EINVAL;
 
 	shift = TPS6507X_MAX_REG_ID - dcdc;
-	return tps6507x_pmic_clear_bits(tps, TPS6507X_REG_CON_CTRL1,
-					1 << shift);
+	return tps6507x_pmic_modify_bits(tps, TPS6507X_REG_CON_CTRL1,
+					 1 << shift, 0);
 }
 
 static int tps6507x_pmic_ldo_enable(struct regulator_dev *dev)
@@ -270,7 +226,8 @@ static int tps6507x_pmic_ldo_enable(struct regulator_dev *dev)
 		return -EINVAL;
 
 	shift = TPS6507X_MAX_REG_ID - ldo;
-	return tps6507x_pmic_set_bits(tps, TPS6507X_REG_CON_CTRL1, 1 << shift);
+	return tps6507x_pmic_modify_bits(tps, TPS6507X_REG_CON_CTRL1, 0,
+					 1 << shift);
 }
 
 static int tps6507x_pmic_ldo_disable(struct regulator_dev *dev)
@@ -283,8 +240,8 @@ static int tps6507x_pmic_ldo_disable(struct regulator_dev *dev)
 		return -EINVAL;
 
 	shift = TPS6507X_MAX_REG_ID - ldo;
-	return tps6507x_pmic_clear_bits(tps, TPS6507X_REG_CON_CTRL1,
-					1 << shift);
+	return tps6507x_pmic_modify_bits(tps, TPS6507X_REG_CON_CTRL1,
+					 1 << shift, 0);
 }
 
 static int tps6507x_pmic_dcdc_get_voltage(struct regulator_dev *dev)
@@ -325,7 +282,7 @@ static int tps6507x_pmic_dcdc_set_voltage(struct regulator_dev *dev,
 				int min_uV, int max_uV)
 {
 	struct tps_pmic *tps = rdev_get_drvdata(dev);
-	int data, vsel, dcdc = rdev_get_id(dev);
+	int vsel, dcdc = rdev_get_id(dev);
 	u8 reg;
 
 	switch (dcdc) {
@@ -368,14 +325,9 @@ static int tps6507x_pmic_dcdc_set_voltage(struct regulator_dev *dev,
 	if (vsel == tps->info[dcdc]->table_len)
 		return -EINVAL;
 
-	data = tps6507x_pmic_reg_read(tps, reg);
-	if (data < 0)
-		return data;
+	return tps6507x_pmic_modify_bits(tps, reg, TPS6507X_DEFDCDCX_DCDC_MASK,
+					 vsel);
 
-	data &= ~TPS6507X_DEFDCDCX_DCDC_MASK;
-	data |= vsel;
-
-	return tps6507x_pmic_reg_write(tps, reg, data);
 }
 
 static int tps6507x_pmic_ldo_get_voltage(struct regulator_dev *dev)
@@ -406,7 +358,7 @@ static int tps6507x_pmic_ldo_set_voltage(struct regulator_dev *dev,
 				int min_uV, int max_uV)
 {
 	struct tps_pmic *tps = rdev_get_drvdata(dev);
-	int data, vsel, ldo = rdev_get_id(dev);
+	int vsel, ldo = rdev_get_id(dev);
 	u8 reg, mask;
 
 	if (ldo < TPS6507X_LDO_1 || ldo > TPS6507X_LDO_2)
@@ -436,14 +388,7 @@ static int tps6507x_pmic_ldo_set_voltage(struct regulator_dev *dev,
 	if (vsel == tps->info[ldo]->table_len)
 		return -EINVAL;
 
-	data = tps6507x_pmic_reg_read(tps, reg);
-	if (data < 0)
-		return data;
-
-	data &= ~mask;
-	data |= vsel;
-
-	return tps6507x_pmic_reg_write(tps, reg, data);
+	return  tps6507x_pmic_modify_bits(tps, reg, mask, vsel);
 }
 
 static int tps6507x_pmic_dcdc_list_voltage(struct regulator_dev *dev,
