@@ -502,6 +502,7 @@ int tps_6507x_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	struct regulator_init_data *init_data;
 	struct regulator_dev *rdev;
 	struct tps_pmic *tps;
+	struct tps6507x_board *tps_board;
 	int i;
 
 	if (!i2c_check_functionality(client->adapter,
@@ -509,10 +510,21 @@ int tps_6507x_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		return -EIO;
 
 	/**
+	 * tps_board points to tps6507x related constants
+	 * coming from the board-evm file.
+	 */
+
+	tps_board = (struct tps6507x_board *)client->dev.platform_data;
+
+	if (!tps_board)
+		return -EIO;
+
+	/**
 	 * init_data points to array of regulator_init structures
 	 * coming from the board-evm file.
 	 */
-	init_data = client->dev.platform_data;
+
+	init_data = tps_board->tps6507x_pmic_init_data;
 
 	if (!init_data)
 		return -EIO;
