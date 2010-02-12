@@ -401,102 +401,6 @@ static struct pca953x_platform_data da850_evm_ui_expander_info = {
 	.teardown	= da850_evm_ui_expander_teardown,
 };
 
-static struct i2c_board_info __initdata da850_evm_i2c_devices[] = {
-	{
-		I2C_BOARD_INFO("tlv320aic3x", 0x18),
-	},
-	{
-		I2C_BOARD_INFO("tca6416", 0x20),
-		.platform_data = &da850_evm_ui_expander_info,
-	},
-	{
-		I2C_BOARD_INFO("cdce913", 0x65),
-	},
-};
-
-static struct davinci_uart_config da850_evm_uart_config __initdata = {
-	.enabled_uarts = 0x7,
-};
-
-/* davinci da850 evm audio machine driver */
-static u8 da850_iis_serializer_direction[] = {
-	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
-	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
-	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	TX_MODE,
-	RX_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
-};
-
-static struct snd_platform_data da850_evm_snd_data = {
-	.tx_dma_offset	= 0x2000,
-	.rx_dma_offset	= 0x2000,
-	.op_mode	= DAVINCI_MCASP_IIS_MODE,
-	.num_serializer	= ARRAY_SIZE(da850_iis_serializer_direction),
-	.tdm_slots	= 2,
-	.serial_dir	= da850_iis_serializer_direction,
-	.eventq_no	= EVENTQ_1,
-	.version	= MCASP_VERSION_2,
-	.txnumevt	= 1,
-	.rxnumevt	= 1,
-};
-
-static struct davinci_mcbsp_platform_data da850_mcbsp0_config = {
-	.inst	= 0,
-};
-
-static struct davinci_mcbsp_platform_data da850_mcbsp1_config = {
-	.inst	= 1,
-};
-
-static int da850_evm_mmc_get_ro(int index)
-{
-	return gpio_get_value(DA850_MMCSD_WP_PIN);
-}
-
-static int da850_evm_mmc_get_cd(int index)
-{
-	return !gpio_get_value(DA850_MMCSD_CD_PIN);
-}
-
-static struct davinci_mmc_config da850_mmc_config = {
-	.get_ro		= da850_evm_mmc_get_ro,
-	.get_cd		= da850_evm_mmc_get_cd,
-	.wires		= 4,
-	.max_freq	= 50000000,
-	.caps		= MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED,
-	.version	= MMC_CTLR_VERSION_2,
-};
-
-static void da850_panel_power_ctrl(int val)
-{
-	/* lcd power */
-	gpio_set_value(DA850_LCD_PWR_PIN, val);
-
-	mdelay(200);
-
-	/* lcd backlight */
-	gpio_set_value(DA850_LCD_BL_PIN, val);
-}
-
-static int da850_lcd_hw_init(void)
-{
-	int status;
-
-	status = gpio_request(DA850_LCD_BL_PIN, "lcd bl\n");
-	if (status < 0)
-		return status;
-
-	status = gpio_request(DA850_LCD_PWR_PIN, "lcd pwr\n");
-	if (status < 0) {
-		gpio_free(DA850_LCD_BL_PIN);
-		return status;
-	}
-
-	gpio_direction_output(DA850_LCD_BL_PIN, 0);
-	gpio_direction_output(DA850_LCD_PWR_PIN, 0);
-
-	return 0;
-}
-
 /* TPS65070 voltage regulator support */
 
 /* 3.3V */
@@ -637,17 +541,104 @@ static struct tps6507x_board tps_board = {
 	.tps6507x_pmic_init_data = &tps65070_regulator_data[0],
 };
 
-static struct i2c_board_info __initdata da850evm_tps65070_info[] = {
+static struct i2c_board_info __initdata da850_evm_i2c_devices[] = {
 	{
 		I2C_BOARD_INFO("tps6507x", 0x48),
 		.platform_data = &tps_board,
 	},
+	{
+		I2C_BOARD_INFO("tlv320aic3x", 0x18),
+	},
+	{
+		I2C_BOARD_INFO("tca6416", 0x20),
+		.platform_data = &da850_evm_ui_expander_info,
+	},
+	{
+		I2C_BOARD_INFO("cdce913", 0x65),
+	},
 };
 
-static int __init pmic_tps65070_init(void)
+static struct davinci_uart_config da850_evm_uart_config __initdata = {
+	.enabled_uarts = 0x7,
+};
+
+/* davinci da850 evm audio machine driver */
+static u8 da850_iis_serializer_direction[] = {
+	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
+	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
+	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	TX_MODE,
+	RX_MODE,	INACTIVE_MODE,	INACTIVE_MODE,	INACTIVE_MODE,
+};
+
+static struct snd_platform_data da850_evm_snd_data = {
+	.tx_dma_offset	= 0x2000,
+	.rx_dma_offset	= 0x2000,
+	.op_mode	= DAVINCI_MCASP_IIS_MODE,
+	.num_serializer	= ARRAY_SIZE(da850_iis_serializer_direction),
+	.tdm_slots	= 2,
+	.serial_dir	= da850_iis_serializer_direction,
+	.eventq_no	= EVENTQ_1,
+	.version	= MCASP_VERSION_2,
+	.txnumevt	= 1,
+	.rxnumevt	= 1,
+};
+
+static struct davinci_mcbsp_platform_data da850_mcbsp0_config = {
+	.inst	= 0,
+};
+
+static struct davinci_mcbsp_platform_data da850_mcbsp1_config = {
+	.inst	= 1,
+};
+
+static int da850_evm_mmc_get_ro(int index)
 {
-	return i2c_register_board_info(1, da850evm_tps65070_info,
-					ARRAY_SIZE(da850evm_tps65070_info));
+	return gpio_get_value(DA850_MMCSD_WP_PIN);
+}
+
+static int da850_evm_mmc_get_cd(int index)
+{
+	return !gpio_get_value(DA850_MMCSD_CD_PIN);
+}
+
+static struct davinci_mmc_config da850_mmc_config = {
+	.get_ro		= da850_evm_mmc_get_ro,
+	.get_cd		= da850_evm_mmc_get_cd,
+	.wires		= 4,
+	.max_freq	= 50000000,
+	.caps		= MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED,
+	.version	= MMC_CTLR_VERSION_2,
+};
+
+static void da850_panel_power_ctrl(int val)
+{
+	/* lcd power */
+	gpio_set_value(DA850_LCD_PWR_PIN, val);
+
+	mdelay(200);
+
+	/* lcd backlight */
+	gpio_set_value(DA850_LCD_BL_PIN, val);
+}
+
+static int da850_lcd_hw_init(void)
+{
+	int status;
+
+	status = gpio_request(DA850_LCD_BL_PIN, "lcd bl\n");
+	if (status < 0)
+		return status;
+
+	status = gpio_request(DA850_LCD_PWR_PIN, "lcd pwr\n");
+	if (status < 0) {
+		gpio_free(DA850_LCD_BL_PIN);
+		return status;
+	}
+
+	gpio_direction_output(DA850_LCD_BL_PIN, 0);
+	gpio_direction_output(DA850_LCD_PWR_PIN, 0);
+
+	return 0;
 }
 
 static const short da850_evm_lcdc_pins[] = {
@@ -1038,11 +1029,6 @@ static struct platform_device da850_gpio_i2c = {
 static __init void da850_evm_init(void)
 {
 	int ret;
-
-	ret = pmic_tps65070_init();
-	if (ret)
-		pr_warning("da850_evm_init: TPS65070 PMIC init failed: %d\n",
-				ret);
 
 	ret = da8xx_register_edma();
 	if (ret)
