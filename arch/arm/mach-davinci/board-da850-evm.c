@@ -1197,7 +1197,6 @@ static __init void da850_evm_init(void)
 		pr_warning("da850_evm_init: SATA registration failed: %d\n",
 						ret);
 
-
 	if (HAS_VPIF_DISPLAY || HAS_VPIF_CAPTURE) {
 		ret = da850_register_vpif();
 		if (ret)
