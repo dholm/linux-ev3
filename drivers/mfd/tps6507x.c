@@ -27,6 +27,7 @@ struct tps_sub_devices {
 };
 
 static struct tps_sub_devices tps6507x_sub_devices[] = {
+	{ "tps6507x-pmic", NULL },
 	{ NULL, NULL }
 };
 
