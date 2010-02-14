@@ -452,7 +452,8 @@ static struct spi_board_info da830_spi_board_info[] = {
 };
 
 #ifdef CONFIG_DA830_UI_LCD
-static inline void da830_evm_init_lcdc(int mux_mode)
+static inline void da830_evm_init_lcdc(int mux_mode,
+				struct da8xx_lcdc_platform_data *pdata)
 {
 	int ret;
 
@@ -461,14 +462,15 @@ static inline void da830_evm_init_lcdc(int mux_mode)
 		pr_warning("da830_evm_init: lcdcntl mux setup failed: %d\n",
 				ret);
 
-	ret = da8xx_register_lcdc(&sharp_lcd035q3dg01_pdata);
+	ret = da8xx_register_lcdc(pdata);
 	if (ret)
 		pr_warning("da830_evm_init: lcd setup failed: %d\n", ret);
 
 	gpio_direction_output(mux_mode, 0);
 }
 #else
-static inline void da830_evm_init_lcdc(int mux_mode) { }
+static inline void da830_evm_init_lcdc(int mux_mode,
+				struct da8xx_lcdc_platform_data *pdata) {}
 #endif
 
 static struct at24_platform_data da830_evm_i2c_eeprom_info = {
@@ -479,15 +481,26 @@ static struct at24_platform_data da830_evm_i2c_eeprom_info = {
 	.context	= (void *)0x7f00,
 };
 
+#define DA830_EVM_TSC2004_ADDRESS	0x49
 static int __init da830_evm_ui_expander_setup(struct i2c_client *client,
 		int gpio, unsigned ngpio, void *context)
 {
+	struct da8xx_lcdc_platform_data *pdata = &sharp_lcd035q3dg01_pdata;
+	struct i2c_msg tsc_detect = {
+		.addr = DA830_EVM_TSC2004_ADDRESS,
+	};
+
 	gpio_request(gpio + 6, "UI MUX_MODE");
 
 	/* Drive mux mode low to match the default without UI card */
 	gpio_direction_output(gpio + 6, 0);
 
-	da830_evm_init_lcdc(gpio + 6);
+	/* check if the new UI card with touchscreen LCD is connected */
+	ret = i2c_transfer(client->adapter, &tsc_detect, 1);
+	if (ret == 1)
+		pdata = &sharp_lk043t1dg01_pdata;
+
+	da830_evm_init_lcdc(gpio + 6, pdata);
 
 	da830_evm_init_nand(gpio + 6);
 
