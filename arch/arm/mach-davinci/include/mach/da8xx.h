@@ -15,6 +15,8 @@
 
 #include <linux/davinci_emac.h>
 #include <linux/spi/spi.h>
+#include <linux/platform_device.h>
+
 #include <mach/serial.h>
 #include <mach/edma.h>
 #include <mach/i2c.h>
