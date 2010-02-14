@@ -18,6 +18,7 @@
 #include <linux/i2c.h>
 #include <linux/i2c/pcf857x.h>
 #include <linux/i2c/at24.h>
+#include <linux/i2c/tsc2004.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/partitions.h>
 #include <linux/spi/spi.h>
@@ -489,6 +490,7 @@ static int __init da830_evm_ui_expander_setup(struct i2c_client *client,
 	struct i2c_msg tsc_detect = {
 		.addr = DA830_EVM_TSC2004_ADDRESS,
 	};
+	int ret;
 
 	gpio_request(gpio + 6, "UI MUX_MODE");
 
@@ -520,6 +522,52 @@ static struct pcf857x_platform_data __initdata da830_evm_ui_expander_info = {
 	.teardown	= da830_evm_ui_expander_teardown,
 };
 
+/*
+ * TSC 2004 Support
+ */
+#define TSC2004_GPIO_IRQ_PIN	GPIO_TO_PIN(2, 8)
+
+static int tsc2004_init_irq(void)
+{
+	int ret = 0;
+
+	ret = gpio_request(TSC2004_GPIO_IRQ_PIN, "tsc2004-irq");
+	if (ret < 0) {
+		pr_warning("%s: failed to TSC2004 IRQ GPIO: %d\n",
+								__func__, ret);
+		return ret;
+	}
+
+	ret = davinci_cfg_reg(DA830_GPIO2_8);
+	if (ret) {
+		pr_warning("%s: PinMux setup for GPIO %d failed: %d\n",
+			   __func__, TSC2004_GPIO_IRQ_PIN, ret);
+		return ret;
+	}
+
+	gpio_direction_input(TSC2004_GPIO_IRQ_PIN);
+
+	return ret;
+}
+
+static void tsc2004_exit_irq(void)
+{
+	gpio_free(TSC2004_GPIO_IRQ_PIN);
+}
+
+static int tsc2004_get_irq_level(void)
+{
+	return gpio_get_value(TSC2004_GPIO_IRQ_PIN) ? 0 : 1;
+}
+
+struct tsc2004_platform_data da830evm_tsc2004data = {
+	.model = 2004,
+	.x_plate_ohms = 180,
+	.get_pendown_state = tsc2004_get_irq_level,
+	.init_platform_hw = tsc2004_init_irq,
+	.exit_platform_hw = tsc2004_exit_irq,
+};
+
 static struct i2c_board_info __initdata da830_evm_i2c_devices[] = {
 	{
 		I2C_BOARD_INFO("24c256", 0x50),
@@ -532,6 +580,11 @@ static struct i2c_board_info __initdata da830_evm_i2c_devices[] = {
 		I2C_BOARD_INFO("pcf8574", 0x3f),
 		.platform_data	= &da830_evm_ui_expander_info,
 	},
+};
+
+static struct i2c_board_info __initdata da830_evm_tsc2004_dev = {
+	I2C_BOARD_INFO("tsc2004", DA830_EVM_TSC2004_ADDRESS),
+	.platform_data  = &da830evm_tsc2004data,
 };
 
 static struct davinci_i2c_platform_data da830_evm_i2c_0_pdata = {
@@ -583,6 +636,9 @@ static __init void da830_evm_init(void)
 	davinci_serial_init(&da830_evm_uart_config);
 	i2c_register_board_info(1, da830_evm_i2c_devices,
 			ARRAY_SIZE(da830_evm_i2c_devices));
+
+	da830_evm_tsc2004_dev.irq = gpio_to_irq(TSC2004_GPIO_IRQ_PIN),
+	i2c_register_board_info(1, &da830_evm_tsc2004_dev, 1);
 
 	ret = da8xx_pinmux_setup(da830_evm_mcasp1_pins);
 	if (ret)
