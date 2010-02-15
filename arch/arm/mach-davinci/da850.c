@@ -1135,6 +1135,7 @@ static struct davinci_cpufreq_config cpufreq_info = {
 	.init = da850_regulator_init,
 	.set_voltage = da850_set_voltage,
 #endif
+	.asyncrate = 100000000,
 };
 
 static struct platform_device da850_cpufreq_device = {

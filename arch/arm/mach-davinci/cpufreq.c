@@ -216,7 +216,7 @@ static int __init davinci_cpufreq_probe(struct platform_device *pdev)
 	asyncclk = clk_get(NULL, "async");
 	if (!IS_ERR(asyncclk)) {
 		cpufreq.asyncclk = asyncclk;
-		cpufreq.asyncrate = clk_get_rate(asyncclk);
+		cpufreq.asyncrate = pdata->asyncrate;
 	}
 
 	return cpufreq_register_driver(&davinci_driver);
