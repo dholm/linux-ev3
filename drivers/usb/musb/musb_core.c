@@ -421,7 +421,9 @@ static irqreturn_t musb_stage0_irq(struct musb *musb, u8 int_usb,
 				u8 devctl, u8 power)
 {
 	irqreturn_t handled = IRQ_NONE;
+#if defined(CONFIG_USB_MUSB_HDRC_HCD) || defined(CONFIG_USB_MUSB_OTG)
 	void __iomem *mbase = musb->mregs;
+#endif
 
 	DBG(3, "<== Power=%02x, DevCtl=%02x, int_usb=0x%x\n", power, devctl,
 		int_usb);
