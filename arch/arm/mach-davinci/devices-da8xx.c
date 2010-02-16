@@ -172,8 +172,6 @@ static struct edma_soc_info da830_edma_info[] = {
 		.n_slot			= 128,
 		.n_tc			= 2,
 		.n_cc			= 1,
-		.rsv_chans		= da830_dma_rsv_chans,
-		.rsv_slots		= da830_dma_rsv_slots,
 		.queue_tc_mapping	= da8xx_queue_tc_mapping,
 		.queue_priority_mapping	= da8xx_queue_priority_mapping,
 	},
@@ -186,8 +184,6 @@ static struct edma_soc_info da850_edma_info[] = {
 		.n_slot			= 128,
 		.n_tc			= 2,
 		.n_cc			= 1,
-		.rsv_chans		= da850_dma0_rsv_chans,
-		.rsv_slots		= da850_dma0_rsv_slots,
 		.queue_tc_mapping	= da8xx_queue_tc_mapping,
 		.queue_priority_mapping	= da8xx_queue_priority_mapping,
 	},
@@ -197,8 +193,6 @@ static struct edma_soc_info da850_edma_info[] = {
 		.n_slot			= 128,
 		.n_tc			= 1,
 		.n_cc			= 1,
-		.rsv_chans		= da850_dma1_rsv_chans,
-		.rsv_slots		= da850_dma1_rsv_slots,
 		.queue_tc_mapping	= da850_queue_tc_mapping,
 		.queue_priority_mapping	= da850_queue_priority_mapping,
 	},
@@ -311,6 +305,17 @@ static struct platform_device da850_edma_device = {
 int __init da8xx_register_edma(void)
 {
 	struct platform_device *pdev;
+
+	/* Reserve channels and slots for DSP */
+	if (!cpu_is_davinci_da8xx_arm_only()) {
+		da830_edma_info[0].rsv_chans = da830_dma_rsv_chans;
+		da830_edma_info[0].rsv_slots = da830_dma_rsv_slots;
+
+		da850_edma_info[0].rsv_chans = da850_dma0_rsv_chans;
+		da850_edma_info[0].rsv_slots = da850_dma0_rsv_slots;
+		da850_edma_info[1].rsv_chans = da850_dma1_rsv_chans;
+		da850_edma_info[1].rsv_slots = da850_dma1_rsv_slots;
+	}
 
 	if (cpu_is_davinci_da830())
 		pdev = &da830_edma_device;
