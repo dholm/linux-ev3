@@ -26,6 +26,8 @@
 #include <mach/pm.h>
 #include <mach/mcbsp.h>
 #include <mach/vpif.h>
+#include <mach/cputype.h>
+
 #include <linux/usb/musb.h>
 
 extern void __iomem *da8xx_syscfg0_base;
@@ -45,6 +47,7 @@ extern void __iomem *da8xx_syscfg1_base;
 #define DA8XX_SYSCFG0_BASE	(IO_PHYS + 0x14000)
 #define DA8XX_SYSCFG0_VIRT(x)	(da8xx_syscfg0_base + (x))
 #define DA8XX_JTAG_ID_REG	0x18
+#define DA8XX_CHIPREV_ID_REG	0x24
 #define DA8XX_CFGCHIP0_REG	0x17c
 #define DA8XX_CFGCHIP2_REG	0x184
 #define DA8XX_CFGCHIP3_REG	0x188
@@ -117,6 +120,16 @@ extern void __iomem *da8xx_syscfg1_base;
 #else
 #define cpu_is_davinci_da8xx_300mhz()	false
 #endif
+
+static inline int cpu_is_davinci_da8xx_arm_only(void)
+{
+	if (!cpu_is_davinci_da8xx())
+		return 0;
+
+	/* BIT(5) is 0 for ARM only or DSP only devices. */
+	return !(__raw_readl(DA8XX_SYSCFG0_VIRT(DA8XX_CHIPREV_ID_REG))
+								& BIT(5));
+}
 
 void __init da830_init(void);
 void __init da850_init(void);
