@@ -250,6 +250,7 @@ static struct tvp514x_std_info tvp514x_std_list[] = {
 	/* Standard: need to add for additional standard */
 };
 
+static int tvp514x_s_stream(struct v4l2_subdev *, int);
 
 static inline struct tvp514x_decoder *to_decoder(struct v4l2_subdev *sd)
 {
@@ -650,6 +651,10 @@ static int tvp514x_s_routing(struct v4l2_subdev *sd,
 			(output >= OUTPUT_INVALID))
 		/* Index out of bound */
 		return -EINVAL;
+
+	err = tvp514x_s_stream(sd, 1);
+	if (err < 0)
+		return err;
 
 	/* Since this api is goint to detect the input, it is required
 	   to set the standard in the auto switch mode */
