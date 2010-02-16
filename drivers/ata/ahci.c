@@ -1842,11 +1842,11 @@ static int ahci_do_softreset(struct ata_link *link, unsigned int *class,
 	unsigned long now, msecs;
 	struct ata_taskfile tf;
 	int rc;
-	u8 is_pm;
+	u8 is_pm = 0;
 
 	DPRINTK("ENTER\n");
 
-	if (ata_is_host_link(link))
+	if (ata_is_host_link(link)) {
 		if (ahci_read_sig(ap) != 0xffffffff) {
 			is_pm = 0;
 			*class = ahci_dev_classify(ap);
@@ -1857,6 +1857,7 @@ static int ahci_do_softreset(struct ata_link *link, unsigned int *class,
 			if (ahci_read_sig(ap) != 0xffffffff)
 				is_pm = 0;
 		}
+	}
 
 	/* prepare for SRST (AHCI-1.1 10.4.1) */
 	rc = ahci_kick_engine(ap);
