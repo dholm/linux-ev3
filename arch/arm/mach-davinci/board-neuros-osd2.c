@@ -26,6 +26,7 @@
 #include <linux/platform_device.h>
 #include <linux/gpio.h>
 #include <linux/mtd/partitions.h>
+#include <linux/usb/musb.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -188,6 +189,21 @@ static struct davinci_uart_config uart_config __initdata = {
 	.enabled_uarts = (1 << 0),
 };
 
+static struct musb_hdrc_platform_data usb_evm_data[] = {
+	{
+#if defined(CONFIG_USB_MUSB_OTG)
+		.mode = MUSB_OTG,
+#elif defined(CONFIG_USB_MUSB_PERIPHERAL)
+		.mode = MUSB_PERIPHERAL,
+#elif defined(CONFIG_USB_MUSB_HOST)
+		.mode = MUSB_HOST,
+#endif
+		.power = 255,
+		.potpgt = 8,
+		.set_vbus = NULL,
+	}
+};
+
 static void __init davinci_ntosd2_map_io(void)
 {
 	dm644x_init();
@@ -288,7 +304,7 @@ static __init void davinci_ntosd2_init(void)
 	soc_info->emac_pdata->phy_mask = NEUROS_OSD2_PHY_MASK;
 	soc_info->emac_pdata->mdio_max_freq = NEUROS_OSD2_MDIO_FREQUENCY;
 
-	davinci_setup_usb(1000, 8);
+	dm644x_usb_configure(usb_evm_data, ARRAY_SIZE(usb_evm_data));
 	/*
 	 * Mux the pins to be GPIOs, VLYNQEN is already done at startup.
 	 * The AEAWx are five new AEAW pins that can be muxed by separately.

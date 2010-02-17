@@ -71,5 +71,6 @@ extern void davinci_common_init(struct davinci_soc_info *soc_info);
 /* standard place to map on-chip SRAMs; they *may* support DMA */
 #define SRAM_VIRT	0xfffe0000
 #define SRAM_SIZE	SZ_128K
+#define DAVINCI_USB_OTG_BASE    0x01C64000
 
 #endif /* __ARCH_ARM_MACH_DAVINCI_COMMON_H */
