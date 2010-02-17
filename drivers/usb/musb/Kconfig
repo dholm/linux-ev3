@@ -35,7 +35,7 @@ config USB_MUSB_HDRC
 config USB_MUSB_SOC
 	boolean
 	depends on USB_MUSB_HDRC
-	select USB_SUSPEND if ARCH_DAVINCI_DA850
+	select USB_SUSPEND if ARCH_DAVINCI_DA850 && PM
 	default y if ARCH_DAVINCI
 	default y if ARCH_OMAP2430
 	default y if ARCH_OMAP34XX
