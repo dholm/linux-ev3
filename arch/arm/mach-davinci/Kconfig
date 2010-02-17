@@ -40,8 +40,8 @@ config ARCH_DAVINCI_DA850
 	select ARCH_HAS_CPUFREQ
 
 choice
-	prompt "Select Maximum DA8xx/OMAP-L1/AM1xxx SoC speed"
-	depends on ARCH_DAVINCI_DA8XX
+	prompt "Select Maximum DA850/OMAP-L138/AM18xx SoC speed"
+	depends on ARCH_DAVINCI_DA850
 	help
 	  Select the maximum speed the SoC can operate at.
 
