@@ -1232,7 +1232,6 @@ static void usb_process_tx_queue(struct cppi41 *cppi, unsigned index)
 			 * USB functionality. So far, we have obsered
 			 * failure with iperf.
 			 */
-			udelay(20);
 			/* Tx completion routine callback */
 			musb_dma_completion(cppi->musb, ep_num, 1);
 		}
