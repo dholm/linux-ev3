@@ -522,6 +522,9 @@ static struct at24_platform_data da830_evm_i2c_eeprom_info = {
 };
 
 #define DA830_EVM_TSC2004_ADDRESS	0x49
+#define DA830_LCD_BACKLIGHT_PIN		GPIO_TO_PIN(2, 12)
+#define DA830_LCD_AC_ENB_CS		GPIO_TO_PIN(1, 11)
+
 static int __init da830_evm_ui_expander_setup(struct i2c_client *client,
 		int gpio, unsigned ngpio, void *context)
 {
@@ -531,6 +534,22 @@ static int __init da830_evm_ui_expander_setup(struct i2c_client *client,
 	};
 	int ret;
 
+	ret = davinci_cfg_reg(DA830_GPIO1_11);
+	if (ret) {
+		pr_warning("%s: PinMux setup for GPIO %d failed: %d\n",
+		   __func__, DA830_LCD_AC_ENB_CS, ret);
+		return ret;
+	}
+
+	ret = gpio_request(DA830_LCD_AC_ENB_CS, "LCD CS\n");
+	if (ret) {
+		pr_warning("da830_evm_init: can not open GPIO %d\n",
+		   DA830_LCD_AC_ENB_CS);
+		return ret;
+	}
+
+	gpio_direction_output(DA830_LCD_AC_ENB_CS, 1);
+
 	gpio_request(gpio + 6, "UI MUX_MODE");
 
 	/* Drive mux mode low to match the default without UI card */
@@ -538,8 +557,27 @@ static int __init da830_evm_ui_expander_setup(struct i2c_client *client,
 
 	/* check if the new UI card with touchscreen LCD is connected */
 	ret = i2c_transfer(client->adapter, &tsc_detect, 1);
-	if (ret == 1)
+	if (ret == 1) {
+		ret = davinci_cfg_reg(DA830_GPIO2_12);
+		if (ret) {
+			pr_warning("%s: PinMux setup for GPIO %d failed: %d\n",
+			   __func__, DA830_LCD_BACKLIGHT_PIN, ret);
+			gpio_free(DA830_LCD_AC_ENB_CS);
+			return ret;
+		}
+
+		ret = gpio_request(DA830_LCD_BACKLIGHT_PIN, "LCD BL\n");
+		if (ret) {
+			pr_warning("da830_evm_init: can not open GPIO %d\n",
+			   DA830_LCD_BACKLIGHT_PIN);
+			gpio_free(DA830_LCD_AC_ENB_CS);
+			return ret;
+		}
+
+		gpio_direction_output(DA830_LCD_BACKLIGHT_PIN, 1);
+
 		pdata = &sharp_lk043t1dg01_pdata;
+	}
 
 	da830_evm_init_lcdc(gpio + 6, pdata);
 
