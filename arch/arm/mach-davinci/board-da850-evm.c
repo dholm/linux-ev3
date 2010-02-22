@@ -623,7 +623,19 @@ static void da850_panel_power_ctrl(int val)
 
 static int da850_lcd_hw_init(void)
 {
+	void __iomem *cfg_mstpri2_base;
 	int status;
+	u32 val;
+
+	/*
+	 * Reconfigure the LCDC priority to the highest to ensure that
+	 * the throughput/latency requirements for the LCDC are met.
+	 */
+	cfg_mstpri2_base = DA8XX_SYSCFG0_VIRT(DA8XX_MSTPRI2_REG);
+
+	val = __raw_readl(cfg_mstpri2_base);
+	val &= 0x0fffffff;
+	__raw_writel(val, cfg_mstpri2_base);
 
 	status = gpio_request(DA850_LCD_BL_PIN, "lcd bl\n");
 	if (status < 0)

@@ -470,6 +470,24 @@ static struct spi_board_info da830_spi_board_info[] = {
 };
 
 #ifdef CONFIG_DA830_UI_LCD
+static int da830_lcd_hw_init(void)
+{
+	void __iomem *cfg_mstpri2_base;
+	u32 val;
+
+	/*
+	 * Reconfigure the LCDC priority to the highest to ensure that
+	 * the throughput/latency requirements for the LCDC are met.
+	 */
+	cfg_mstpri2_base = DA8XX_SYSCFG0_VIRT(DA8XX_MSTPRI2_REG);
+
+	val = __raw_readl(cfg_mstpri2_base);
+	val &= 0x0fffffff;
+	__raw_writel(val, cfg_mstpri2_base);
+
+	return 0;
+}
+
 static inline void da830_evm_init_lcdc(int mux_mode,
 				struct da8xx_lcdc_platform_data *pdata)
 {
@@ -479,6 +497,10 @@ static inline void da830_evm_init_lcdc(int mux_mode,
 	if (ret)
 		pr_warning("da830_evm_init: lcdcntl mux setup failed: %d\n",
 				ret);
+
+	ret = da830_lcd_hw_init();
+	if (ret)
+		pr_warning("da830_evm_init: lcd hw init failed: %d\n", ret);
 
 	ret = da8xx_register_lcdc(pdata);
 	if (ret)
