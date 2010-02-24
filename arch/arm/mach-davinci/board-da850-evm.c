@@ -826,6 +826,7 @@ static struct vpif_capture_config da850_vpif_capture_config = {
 		.inputs = da850_ch1_inputs,
 		.input_count = ARRAY_SIZE(da850_ch1_inputs),
 	},
+	.card_name      = "DA850/OMAP-L138 Video Capture",
 };
 
 /* VPIF display configuration */
@@ -851,7 +852,7 @@ static struct vpif_display_config da850_vpif_display_config = {
 	.subdev_count	= ARRAY_SIZE(da850_vpif_subdev),
 	.output		= vpif_output,
 	.output_count	= ARRAY_SIZE(vpif_output),
-	.card_name	= "DA850/OMAP-L138 EVM",
+	.card_name	= "DA850/OMAP-L138 Video Display",
 };
 
 #if defined(CONFIG_DAVINCI_MCBSP0)
