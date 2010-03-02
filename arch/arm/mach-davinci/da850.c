@@ -1126,8 +1126,10 @@ static struct cpufreq_frequency_table da850_freq_table[] = {
 	},
 };
 
+#ifdef CONFIG_REGULATOR
 static int da850_set_voltage(unsigned int index);
 static int da850_regulator_init(void);
+#endif
 
 static struct davinci_cpufreq_config cpufreq_info = {
 	.freq_table = &da850_freq_table[0],
