@@ -955,7 +955,7 @@ static struct resource da850_ahci_resources[] = {
 	}
 };
 
-static int da850_ahci_data = 8;
+static int da850_ahci_data = 10;
 static struct platform_device da850_ahci_device = {
 	.name	=	"ahci",
 	.id	=	-1,
