@@ -98,5 +98,28 @@ void ata_plat_remove(struct ata_host *host)
 		__raw_writel(1, IO_ADDRESS(DA850_SATA_CLK_PWRDN));
 }
 
+void ahci_platform_suspend(struct platform_device *pdev)
+{
+	struct ata_host *host = dev_get_drvdata(&pdev->dev);
+	u32	phy_val = 0;
+
+	phy_val = readl(host->iomap + P0PHYCR);
+
+	phy_val &= ~(PHY_ENPLL << 31);
+	writel(phy_val, host->iomap + P0PHYCR);
+}
+
+void ahci_platform_resume(struct platform_device *pdev)
+{
+	struct ata_host *host = dev_get_drvdata(&pdev->dev);
+	u32	phy_val = 0;
+
+	phy_val = readl(host->iomap + P0PHYCR);
+
+	phy_val |= PHY_ENPLL << 31;
+	writel(phy_val, host->iomap + P0PHYCR);
+}
+EXPORT_SYMBOL_GPL(ahci_platform_resume);
 EXPORT_SYMBOL_GPL(ata_plat_init);
 EXPORT_SYMBOL_GPL(ata_plat_remove);
+EXPORT_SYMBOL_GPL(ahci_platform_suspend);

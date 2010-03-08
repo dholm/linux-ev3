@@ -122,7 +122,7 @@ enum {
 	board_ahci_nopmp	= 7,
 	board_ahci_yesncq	= 8,
 	board_ahci_nosntf	= 9,
-	board_ahci_da850	= 9,
+	board_ahci_da850	= 10,
 
 	/* global controller registers */
 	HOST_CAP		= 0x00, /* host capabilities */
@@ -354,8 +354,8 @@ static int ahci_port_resume(struct ata_port *ap);
 static void ahci_dev_config(struct ata_device *dev);
 static void ahci_fill_cmd_slot(struct ahci_port_priv *pp, unsigned int tag,
 			       u32 opts);
-#if defined(CONFIG_PM) && defined(CONFIG_PCI)
 static int ahci_port_suspend(struct ata_port *ap, pm_message_t mesg);
+#if defined(CONFIG_PM) && defined(CONFIG_PCI)
 static int ahci_pci_device_suspend(struct pci_dev *pdev, pm_message_t mesg);
 static int ahci_pci_device_resume(struct pci_dev *pdev);
 #endif
@@ -433,7 +433,7 @@ static struct ata_port_operations ahci_ops = {
 	.em_store		= ahci_led_store,
 	.sw_activity_show	= ahci_activity_show,
 	.sw_activity_store	= ahci_activity_store,
-#if defined(CONFIG_PM) && defined(CONFIG_PCI)
+#if defined(CONFIG_PM)
 	.port_suspend		= ahci_port_suspend,
 	.port_resume		= ahci_port_resume,
 #endif
@@ -540,6 +540,13 @@ static const struct ata_port_info ahci_port_info[] = {
 	[board_ahci_nosntf] =
 	{
 		AHCI_HFLAGS	(AHCI_HFLAG_NO_SNTF),
+		.flags		= AHCI_FLAG_COMMON,
+		.pio_mask	= ATA_PIO4,
+		.udma_mask	= ATA_UDMA6,
+		.port_ops	= &ahci_ops,
+	},
+	[board_ahci_da850] =
+	{
 		.flags		= AHCI_FLAG_COMMON,
 		.pio_mask	= ATA_PIO4,
 		.udma_mask	= ATA_UDMA6,
@@ -1184,6 +1191,8 @@ static int ahci_enable_alpm(struct ata_port *ap,
 	u32 cmd;
 	struct ahci_port_priv *pp = ap->private_data;
 	u32 asp;
+	struct platform_device *pdev = to_platform_device(ap->host->dev);
+	unsigned int board_id = *(int *)pdev->dev.platform_data;
 
 	/* Make sure the host is capable of link power management */
 	if (!(hpriv->cap & HOST_CAP_ALPM))
@@ -1241,7 +1250,8 @@ static int ahci_enable_alpm(struct ata_port *ap,
  	 * enter a lower power link state when it's appropriate and
  	 * based on the value set above for ASP
  	 */
-	cmd |= PORT_CMD_ALPE;
+	if (board_id != board_ahci_da850)
+		cmd |= PORT_CMD_ALPE;
 
 	/* write out new cmd value */
 	writel(cmd, port_mmio + PORT_CMD);
@@ -1251,7 +1261,7 @@ static int ahci_enable_alpm(struct ata_port *ap,
 	return 0;
 }
 
-#if defined(CONFIG_PM) && defined(CONFIG_PCI)
+#ifdef CONFIG_PM
 static void ahci_power_down(struct ata_port *ap)
 {
 	struct ahci_host_priv *hpriv = ap->host->private_data;
@@ -2501,6 +2511,7 @@ static void ahci_pmp_detach(struct ata_port *ap)
 	writel(pp->intr_mask, port_mmio + PORT_IRQ_MASK);
 }
 
+#ifdef CONFIG_PM
 static int ahci_port_resume(struct ata_port *ap)
 {
 	ahci_power_up(ap);
@@ -2514,7 +2525,6 @@ static int ahci_port_resume(struct ata_port *ap)
 	return 0;
 }
 
-#if defined(CONFIG_PM) && defined(COFNIG_PCI)
 static int ahci_port_suspend(struct ata_port *ap, pm_message_t mesg)
 {
 	const char *emsg = NULL;
@@ -2531,6 +2541,7 @@ static int ahci_port_suspend(struct ata_port *ap, pm_message_t mesg)
 	return rc;
 }
 
+#ifdef COFNIG_PCI
 static int ahci_pci_device_suspend(struct pci_dev *pdev, pm_message_t mesg)
 {
 	struct ata_host *host = dev_get_drvdata(&pdev->dev);
@@ -2583,6 +2594,7 @@ static int ahci_pci_device_resume(struct pci_dev *pdev)
 
 	return 0;
 }
+#endif
 #endif
 
 static int ahci_port_start(struct ata_port *ap)
@@ -3340,14 +3352,47 @@ static int ahci_init_one(struct platform_device *pdev)
 #endif
 }
 
+#ifdef CONFIG_PM
+extern void ahci_platform_suspend(struct platform_device *pdev);
+extern void ahci_platform_resume(struct platform_device *pdev);
 
+static int ahci_ctlr_suspend(struct platform_device *pdev, pm_message_t message)
+{
+	struct ata_host *host = dev_get_drvdata(&pdev->dev);
+	int rc = 0;
+
+	rc = ata_host_suspend(host, message);
+	if (rc)
+		return rc;
+
+	clk_disable(host->clock);
+	ahci_platform_suspend(pdev);
+
+	return 0;
+}
+
+static int ahci_ctlr_resume(struct platform_device *pdev)
+{
+	struct ata_host *host = dev_get_drvdata(&pdev->dev);
+
+	clk_enable(host->clock);
+	ahci_platform_resume(pdev);
+	ata_host_resume(host);
+
+	return 0;
+}
+#endif
 
 static struct platform_driver ahci_platform_driver = {
 	.probe			= ahci_init_one,
+#ifdef CONFIG_PM
+	.suspend		= ahci_ctlr_suspend,
+	.resume			= ahci_ctlr_resume,
+#endif
 	.driver			= {
 					.name = DRV_NAME,
 					.owner = THIS_MODULE,
-				}
+				},
 };
 
 static int __init ahci_init(void)
