@@ -734,6 +734,16 @@ static irqreturn_t musb_stage0_irq(struct musb *musb, u8 int_usb,
 			if (musb->a_wait_bcon != 0 && is_otg_enabled(musb))
 				musb_platform_try_idle(musb, jiffies
 					+ msecs_to_jiffies(musb->a_wait_bcon));
+
+			if (is_dr_enabled(musb)) {
+				void __iomem *mbase = musb->mregs;
+
+				devctl = musb_readb(mbase, MUSB_DEVCTL);
+				devctl &= ~MUSB_DEVCTL_SESSION;
+				musb_writeb(mbase, MUSB_DEVCTL, devctl);
+				musb->xceiv->state = OTG_STATE_B_IDLE;
+				musb_platform_try_idle(musb, 0);
+			}
 			break;
 #endif	/* HOST */
 #ifdef CONFIG_USB_MUSB_OTG
@@ -755,6 +765,8 @@ static irqreturn_t musb_stage0_irq(struct musb *musb, u8 int_usb,
 				? musb->gadget_driver->driver.name
 				: "");
 			musb_g_disconnect(musb);
+			if (is_dr_enabled(musb))
+				musb_platform_try_idle(musb, 0);
 			break;
 #endif	/* GADGET */
 		default:
@@ -906,7 +918,7 @@ void musb_start(struct musb *musb)
 	devctl = musb_readb(regs, MUSB_DEVCTL);
 	devctl &= ~MUSB_DEVCTL_SESSION;
 
-	if (is_otg_enabled(musb)) {
+	if (is_otg_enabled(musb) || is_dr_enabled(musb)) {
 		/* session started after:
 		 * (a) ID-grounded irq, host mode;
 		 * (b) vbus present/connect IRQ, peripheral mode;
@@ -1928,6 +1940,12 @@ musb_init_controller(struct device *dev, int nIrq, void __iomem *ctrl)
 #else
 		goto bad_config;
 #endif
+	case MUSB_DUAL_ROLE:
+#ifdef CONFIG_USB_MUSB_DUAL_ROLE
+		break;
+#else
+		goto bad_config;
+#endif
 	case MUSB_OTG:
 #ifdef CONFIG_USB_MUSB_OTG
 		break;
@@ -2066,11 +2084,13 @@ bad_config:
 		}
 	}
 
+#ifdef CONFIG_USB_MUSB_HDRC_HCD
 	/* For the host-only role, we can activate right away.
 	 * (We expect the ID pin to be forcibly grounded!!)
 	 * Otherwise, wait till the gadget driver hooks up.
 	 */
-	if (!is_otg_enabled(musb) && is_host_enabled(musb)) {
+	if (is_otg_enabled(musb) || is_dr_enabled(musb) ||
+		is_host_enabled(musb)) {
 		MUSB_HST_MODE(musb);
 		musb->xceiv->default_a = 1;
 		musb->xceiv->state = OTG_STATE_A_IDLE;
@@ -2084,7 +2104,12 @@ bad_config:
 					& MUSB_DEVCTL_BDEVICE
 				? 'B' : 'A'));
 
-	} else /* peripheral is enabled */ {
+	}
+#endif
+#ifdef CONFIG_USB_GADGET_MUSB_HDRC
+	/* peripheral is enabled */
+	if (is_otg_enabled(musb) || is_dr_enabled(musb) ||
+		is_peripheral_enabled(musb)) {
 		MUSB_DEV_MODE(musb);
 		musb->xceiv->default_a = 0;
 		musb->xceiv->state = OTG_STATE_B_IDLE;
@@ -2097,6 +2122,7 @@ bad_config:
 			musb_readb(musb->mregs, MUSB_DEVCTL));
 
 	}
+#endif
 
 #ifdef CONFIG_SYSFS
 	status = sysfs_create_group(&musb->controller->kobj, &musb_attr_group);
@@ -2452,6 +2478,8 @@ static int __init musb_init(void)
 		", "
 #ifdef CONFIG_USB_MUSB_OTG
 		"otg (peripheral+host)"
+#elif defined(CONFIG_USB_MUSB_DUAL_ROLE)
+		"(host+peripheral)"
 #elif defined(CONFIG_USB_GADGET_MUSB_HDRC)
 		"peripheral"
 #elif defined(CONFIG_USB_MUSB_HDRC_HCD)

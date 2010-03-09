@@ -64,7 +64,8 @@ struct musb_ep;
 
 
 
-#ifdef CONFIG_USB_MUSB_OTG
+#define	is_dr_enabled(musb)		((musb)->board_mode == MUSB_DUAL_ROLE)
+#if defined(CONFIG_USB_MUSB_OTG) || defined(CONFIG_USB_MUSB_DUAL_ROLE)
 
 #define	is_peripheral_enabled(musb)	((musb)->board_mode != MUSB_HOST)
 #define	is_host_enabled(musb)		((musb)->board_mode != MUSB_PERIPHERAL)
