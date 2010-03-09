@@ -415,7 +415,7 @@ void musb_hnp_stop(struct musb *musb)
 
 #define STAGE0_MASK (MUSB_INTR_RESUME | MUSB_INTR_SESSREQ \
 		| MUSB_INTR_VBUSERROR | MUSB_INTR_CONNECT \
-		| MUSB_INTR_RESET | MUSB_INTR_SUSPEND)
+		| MUSB_INTR_RESET | MUSB_INTR_SUSPEND | MUSB_INTR_DISCONNECT)
 
 static irqreturn_t musb_stage0_irq(struct musb *musb, u8 int_usb,
 				u8 devctl, u8 power)
@@ -1068,7 +1068,8 @@ static struct fifo_cfg __initdata mode_2_cfg[] = {
 { .hw_ep_num = 1, .style = FIFO_RX,   .maxpacket = 512, },
 { .hw_ep_num = 2, .style = FIFO_TX,   .maxpacket = 512, },
 { .hw_ep_num = 2, .style = FIFO_RX,   .maxpacket = 512, },
-{ .hw_ep_num = 3, .style = FIFO_RXTX, .maxpacket = 256, },
+{ .hw_ep_num = 3, .style = FIFO_TX,   .maxpacket = 512, },
+{ .hw_ep_num = 3, .style = FIFO_RX,   .maxpacket = 1024,},
 { .hw_ep_num = 4, .style = FIFO_RXTX, .maxpacket = 256, },
 };
 
