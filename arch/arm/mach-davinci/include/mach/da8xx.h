@@ -215,6 +215,10 @@ extern const short da850_vpif_display_pins[];
 extern const short da850_evm_usb11_pins[];
 extern const short da850_sata_pins[];
 
+#ifdef CONFIG_DAVINCI_MUX
 int da8xx_pinmux_setup(const short pins[]);
+#else
+static inline int da8xx_pinmux_setup(const short pins[]) { return 0; }
+#endif
 
 #endif /* __ASM_ARCH_DAVINCI_DA8XX_H */
