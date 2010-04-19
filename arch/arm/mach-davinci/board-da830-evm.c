@@ -488,6 +488,11 @@ static int da830_lcd_hw_init(void)
 	return 0;
 }
 
+static const short da830_evm_lcdc_pins[] = {
+	DA830_NLCD_AC_ENB_CS,
+	-1
+};
+
 static inline void da830_evm_init_lcdc(int mux_mode,
 				struct da8xx_lcdc_platform_data *pdata)
 {
@@ -497,6 +502,13 @@ static inline void da830_evm_init_lcdc(int mux_mode,
 	if (ret)
 		pr_warning("da830_evm_init: lcdcntl mux setup failed: %d\n",
 				ret);
+
+#if !defined(CONFIG_FB_DA8XX) && !defined(CONFIG_FB_DA8XX_MODULE)
+	ret = da8xx_pinmux_setup(da830_evm_lcdc_pins);
+	if (ret)
+		pr_warning("da830_evm_init: evm lcd mux setup failed: %d\n",
+				ret);
+#endif
 
 	ret = da830_lcd_hw_init();
 	if (ret)
