@@ -182,6 +182,9 @@
 /* Aeroflex Gaisler GRLIB APBUART */
 #define PORT_APBUART    90
 
+/* omapl pru uart emulation */
+#define OMAPL_PRU_SUART	91
+
 #ifdef __KERNEL__
 
 #include <linux/compiler.h>
