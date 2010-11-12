@@ -174,6 +174,25 @@ static __init void da830_evm_usb_init(void)
 			   __func__, ret);
 }
 
+static __init int da830_evm_config_pru_suart(void)
+{
+    int ret;
+
+    if (!machine_is_davinci_da830_evm())
+        return 0;
+
+    ret = da8xx_pinmux_setup(da830_pru_suart_pins);
+    if (ret)
+        pr_warning("da830_evm_init: da830_pru_suart_pins mux setup failed: %d\n",
+                ret);
+
+    ret = da8xx_register_pru_suart();
+    if (ret)
+        pr_warning("da830_evm_init: pru suart registration failed: %d\n", ret);
+    return ret;
+}
+device_initcall(da830_evm_config_pru_suart);
+
 static struct davinci_uart_config da830_evm_uart_config __initdata = {
 	.enabled_uarts = 0x7,
 };

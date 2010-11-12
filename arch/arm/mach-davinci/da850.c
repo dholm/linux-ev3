@@ -15,6 +15,7 @@
 #include <linux/clk.h>
 #include <linux/platform_device.h>
 #include <linux/cpufreq.h>
+#include <linux/delay.h>
 #include <linux/regulator/consumer.h>
 #include <linux/platform_device.h>
 
@@ -237,6 +238,13 @@ static struct clk tptc2_clk = {
 	.flags		= ALWAYS_ENABLED,
 };
 
+static struct clk pru_clk = {
+	.name		= "pru_ck",
+	.parent		= &pll0_sysclk2,
+	.lpsc		= DA8XX_LPSC0_DMAX,
+	.flags      = ALWAYS_ENABLED,
+};
+
 static struct clk uart0_clk = {
 	.name		= "uart0",
 	.parent		= &pll0_sysclk2,
@@ -317,6 +325,13 @@ static struct clk mcasp_clk = {
 	.flags		= DA850_CLK_ASYNC3,
 };
 
+static struct clk mcasp_pru_clk = {
+	.name		= "mcasp_pru",
+	.parent		= &pll0_sysclk2,
+	.lpsc		= DA8XX_LPSC1_McASP0,
+	.gpsc		= 1,
+	.flags		= DA850_CLK_ASYNC3,
+};
 static struct clk lcdc_clk = {
 	.name		= "lcdc",
 	.parent		= &pll0_sysclk2,
@@ -420,6 +435,7 @@ static struct clk_lookup da850_clks[] = {
 	CLK(NULL,		"tpcc1",	&tpcc1_clk),
 	CLK(NULL,		"tptc2",	&tptc2_clk),
 	CLK(NULL,		"uart0",	&uart0_clk),
+	CLK(NULL,		"pru_ck",	&pru_clk),
 	CLK(NULL,		"uart1",	&uart1_clk),
 	CLK(NULL,		"uart2",	&uart2_clk),
 	CLK(NULL,		"aintc",	&aintc_clk),
@@ -429,6 +445,7 @@ static struct clk_lookup da850_clks[] = {
 	CLK(NULL,		"arm",		&arm_clk),
 	CLK(NULL,		"rmii",		&rmii_clk),
 	CLK("davinci_emac.1",	NULL,		&emac_clk),
+	CLK(NULL,	"mcasp_pru",	&mcasp_pru_clk),
 	CLK("davinci-mcasp.0",	NULL,		&mcasp_clk),
 	CLK("da8xx_lcdc.0",	NULL,		&lcdc_clk),
 	CLK("davinci_mmc.0",	NULL,		&mmcsd_clk),
@@ -447,9 +464,13 @@ static struct clk_lookup da850_clks[] = {
 
 /*
  * Device specific mux setup
- *
- *		soc	description	mux	mode	mode	mux	dbg
- *					reg	offset	mask	mode
+ *	soc			-> DA850
+ *	desc		-> Pin name, which evaluates to soc##_##desc.
+ *	muxreg	 	-> Pin Multiplexing Control n (PINMUXn) Register number.
+ *	mode_offset	-> Bit offset in the register PINMUXn.
+ *	mode_mask	-> Number of bits for Pin Multiplexing Control n.
+ *	mux_mode	-> Multiplexing mode to set.
+ *	dbg			-> debug on/off.
  */
 static const struct mux_config da850_pins[] = {
 #ifdef CONFIG_DAVINCI_MUX
@@ -570,7 +591,7 @@ static const struct mux_config da850_pins[] = {
 	MUX_CFG(DA850, EMA_A_5,		12,	8,	15,	1,	false)
 	MUX_CFG(DA850, EMA_A_6,		12,	4,	15,	1,	false)
 	MUX_CFG(DA850, EMA_A_7,		12,	0,	15,	1,	false)
-	MUX_CFG(DA850, EMA_A_8,		11,	28,	15,	1,	false)
+	MUX_CFG(DA850, EMA_A_8,		11,	28,	15,	8,	false)
 	MUX_CFG(DA850, EMA_A_9,		11,	24,	15,	1,	false)
 	MUX_CFG(DA850, EMA_A_10,	11,	20,	15,	1,	false)
 	MUX_CFG(DA850, EMA_A_11,	11,	16,	15,	1,	false)
@@ -598,12 +619,17 @@ static const struct mux_config da850_pins[] = {
 	MUX_CFG(DA850, EMA_CLK,		6,	0,	15,	1,	false)
 	MUX_CFG(DA850, EMA_WAIT_1,	6,	24,	15,	1,	false)
 	MUX_CFG(DA850, NEMA_CS_2,	7,	0,	15,	1,	false)
+    /* PRU functions for soft can */
+    MUX_CFG(DA850, PRU0_R31_0,  7,  28, 15, 0,  false)
+    MUX_CFG(DA850, PRU1_R30_15, 12, 0,  15, 4,  false)
+    MUX_CFG(DA850, PRU1_R31_18, 11, 20,  15, 0,  false)
 	/* SPI1 function */
 	MUX_CFG(DA850, SPI1_CS_0,	5,	4,	15,	1,	false)
 	MUX_CFG(DA850, SPI1_CLK,	5,	8,	15,	1,	false)
 	MUX_CFG(DA850, SPI1_SOMI,	5,	16,	15,	1,	false)
 	MUX_CFG(DA850, SPI1_SIMO,	5,	20,	15,	1,	false)
 	/* GPIO function */
+	MUX_CFG(DA850, GPIO2_0,     6,  28, 15, 8,  false)
 	MUX_CFG(DA850, GPIO2_6,		6,	4,	15,	8,	false)
 	MUX_CFG(DA850, GPIO2_8,		5,	28,	15,	8,	false)
 	MUX_CFG(DA850, GPIO2_15,	5,	0,	15,	8,	false)
@@ -677,6 +703,20 @@ static const struct mux_config da850_pins[] = {
 
 const short da850_uart0_pins[] __initdata = {
 	DA850_NUART0_CTS, DA850_NUART0_RTS, DA850_UART0_RXD, DA850_UART0_TXD,
+	-1
+};
+
+const short da850_pru_can_pins[] __initdata = {
+	DA850_GPIO2_0, DA850_PRU0_R31_0, DA850_PRU1_R30_15,
+	DA850_PRU1_R31_18,
+	-1
+};
+
+const short da850_pru_suart_pins[] __initdata = {
+	DA850_AHCLKX, DA850_ACLKX, DA850_AFSX,
+    DA850_AHCLKR, DA850_ACLKR, DA850_AFSR,
+    DA850_AXR_13, DA850_AXR_9, DA850_AXR_7,
+	DA850_AXR_14, DA850_AXR_10, DA850_AXR_8,
 	-1
 };
 
@@ -758,7 +798,7 @@ const short da850_nor_pins[] __initdata = {
 	DA850_EMA_D_14, DA850_EMA_D_15, DA850_EMA_A_0, DA850_EMA_A_1,
 	DA850_EMA_A_2, DA850_EMA_A_3, DA850_EMA_A_4, DA850_EMA_A_5,
 	DA850_EMA_A_6, DA850_EMA_A_7, DA850_EMA_A_8, DA850_EMA_A_9,
-	DA850_EMA_A_10, DA850_EMA_A_11, DA850_EMA_A_12, DA850_EMA_A_13,
+	/*DA850_EMA_A_10,*/ DA850_EMA_A_11, DA850_EMA_A_12, DA850_EMA_A_13,
 	DA850_EMA_A_14, DA850_EMA_A_15, DA850_EMA_A_16, DA850_EMA_A_17,
 	DA850_EMA_A_18, DA850_EMA_A_19, DA850_EMA_A_20, DA850_EMA_A_21,
 	DA850_EMA_A_22, DA850_EMA_A_23,

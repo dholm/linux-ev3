@@ -14,6 +14,8 @@
 #include <linux/platform_device.h>
 #include <linux/dma-mapping.h>
 #include <linux/serial_8250.h>
+#include <linux/ti_omapl_pru_suart.h>
+#include <linux/can/platform/ti_omapl_pru_can.h>
 
 #include <mach/cputype.h>
 #include <mach/common.h>
@@ -90,6 +92,153 @@ struct platform_device da8xx_serial_device = {
 		.platform_data	= da8xx_serial_pdata,
 	},
 };
+
+#define OMAPL138_PRU_MEM_BASE	   0x01C30000
+
+#define OMAPL138_INT_PRU_SUART_1 IRQ_DA8XX_EVTOUT0
+#define OMAPL138_INT_PRU_SUART_2 IRQ_DA8XX_EVTOUT1
+#define OMAPL138_INT_PRU_SUART_3 IRQ_DA8XX_EVTOUT2
+#define OMAPL138_INT_PRU_SUART_4 IRQ_DA8XX_EVTOUT3
+#define OMAPL138_INT_PRU_SUART_5 IRQ_DA8XX_EVTOUT4
+#define OMAPL138_INT_PRU_SUART_6 IRQ_DA8XX_EVTOUT5
+#define OMAPL138_INT_PRU_SUART_7 IRQ_DA8XX_EVTOUT6
+#define OMAPL138_INT_PRU_SUART_8 IRQ_DA8XX_EVTOUT7
+#ifndef CONFIG_OMAPL_SUART_MCASP
+#define CONFIG_OMAPL_SUART_MCASP 0
+#endif
+static struct resource omapl138_pru_suart_resources[] = {
+        {
+				.name 	= "omapl_pru_suart",
+                .start  = OMAPL138_PRU_MEM_BASE,
+                .end    = OMAPL138_PRU_MEM_BASE + 0xFFFF,
+                .flags  = IORESOURCE_MEM,
+        },
+        {
+#if (CONFIG_OMAPL_SUART_MCASP == 0)
+				.start  = DAVINCI_DA8XX_MCASP0_REG_BASE,
+		        .end    = DAVINCI_DA8XX_MCASP0_REG_BASE + (SZ_1K * 12) - 1,
+                .flags  = IORESOURCE_MEM,
+#elif (CONFIG_OMAPL_SUART_MCASP == 1)
+				.start  = DAVINCI_DA830_MCASP1_REG_BASE,
+		        .end    = DAVINCI_DA830_MCASP1_REG_BASE + (SZ_1K * 12) - 1,
+                .flags  = IORESOURCE_MEM,
+#elif (CONFIG_OMAPL_SUART_MCASP == 2)
+				.start  = DAVINCI_DA830_MCASP2_REG_BASE,
+		        .end    = DAVINCI_DA830_MCASP2_REG_BASE + (SZ_1K * 12) - 1,
+                .flags  = IORESOURCE_MEM,
+#endif
+        },
+
+        {
+				.start  = DA8XX_PSC0_BASE,
+		        .end    = DA8XX_PSC0_BASE + (SZ_1K * 3) - 1,
+                .flags  = IORESOURCE_MEM,
+        },
+        {
+				.start  = DA8XX_PSC1_BASE,
+		        .end    = DA8XX_PSC1_BASE + (SZ_1K * 3) - 1,
+                .flags  = IORESOURCE_MEM,
+        },
+        {
+				.start  = DA8XX_SHARED_RAM_BASE,
+		        .end    = DA8XX_SHARED_RAM_BASE + (SZ_1K * 8) - 1,
+                .flags  = IORESOURCE_MEM,
+        },
+        {
+                .start  = OMAPL138_INT_PRU_SUART_1,
+                .end    = OMAPL138_INT_PRU_SUART_1,
+                .flags  = IORESOURCE_IRQ,
+        },
+        {
+                .start  = OMAPL138_INT_PRU_SUART_2,
+                .end    = OMAPL138_INT_PRU_SUART_2,
+                .flags  = IORESOURCE_IRQ,
+        },
+        {
+                .start  = OMAPL138_INT_PRU_SUART_3,
+                .end    = OMAPL138_INT_PRU_SUART_3,
+                .flags  = IORESOURCE_IRQ,
+        },
+        {
+                .start  = OMAPL138_INT_PRU_SUART_4,
+                .end    = OMAPL138_INT_PRU_SUART_4,
+                .flags  = IORESOURCE_IRQ,
+        },
+        {
+                .start  = OMAPL138_INT_PRU_SUART_5,
+                .end    = OMAPL138_INT_PRU_SUART_5,
+                .flags  = IORESOURCE_IRQ,
+        },
+        {
+                .start  = OMAPL138_INT_PRU_SUART_6,
+                .end    = OMAPL138_INT_PRU_SUART_6,
+                .flags  = IORESOURCE_IRQ,
+        },
+        {
+                .start  = OMAPL138_INT_PRU_SUART_7,
+                .end    = OMAPL138_INT_PRU_SUART_7,
+                .flags  = IORESOURCE_IRQ,
+        },
+        {
+                .start  = OMAPL138_INT_PRU_SUART_8,
+                .end    = OMAPL138_INT_PRU_SUART_8,
+                .flags  = IORESOURCE_IRQ,
+        },
+};
+
+struct platform_device omapl_pru_suart_device = {
+    .name   = "ti_omapl_pru_suart",
+    .id             = 1,
+    .num_resources  = ARRAY_SIZE(omapl138_pru_suart_resources),
+    .resource       = omapl138_pru_suart_resources,
+};
+
+#define OMAPL138_PRU_SUART_VERSION           1
+
+static struct ti_pru_suart_platform_data ti_pru_suart_pdata = {
+        .version                = OMAPL138_PRU_SUART_VERSION,
+};
+
+int __init da8xx_register_pru_suart(void)
+{
+        omapl_pru_suart_device.dev.platform_data = &ti_pru_suart_pdata;
+        return platform_device_register(&omapl_pru_suart_device);
+}
+
+/* Info specific to OMAPL138 */
+#define OMAPL138_INT_PRU_CAN IRQ_DA8XX_EVTOUT0
+static struct resource omapl138_pru_can_resources[] = {
+        {
+                .start  = OMAPL138_PRU_MEM_BASE,
+                .end    = OMAPL138_PRU_MEM_BASE + 0xFFFF,
+                .flags  = IORESOURCE_MEM,
+        },
+        {
+                .start  = OMAPL138_INT_PRU_CAN,
+                .end    = OMAPL138_INT_PRU_CAN,
+                .flags  = IORESOURCE_IRQ,
+        },
+};
+
+static struct platform_device omapl138_pru_can_device = {
+        .name           = "ti_omapl_pru_can",
+        .id             = 1,
+        .num_resources  = ARRAY_SIZE(omapl138_pru_can_resources),
+        .resource       = omapl138_pru_can_resources,
+};
+
+/* Info specific to CAN conroller */
+#define OMAPL138_PRU_CAN_VERSION           1
+
+static struct ti_pru_can_platform_data ti_pru_can_pdata = {
+        .version                = OMAPL138_PRU_CAN_VERSION,
+};
+
+int __init da8xx_register_pru_can(void)
+{
+    omapl138_pru_can_device.dev.platform_data = &ti_pru_can_pdata;
+    return platform_device_register(&omapl138_pru_can_device);
+}
 
 static const s8 da8xx_queue_tc_mapping[][2] = {
 	/* {event queue no, TC no} */

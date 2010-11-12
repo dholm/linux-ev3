@@ -24,6 +24,9 @@
 /* Bases of da830 McASP1 register banks */
 #define DAVINCI_DA830_MCASP1_REG_BASE	0x01D04000
 
+/* Bases of da830 McASP2 register banks */
+#define DAVINCI_DA830_MCASP2_REG_BASE	0x01D08000
+
 /* EDMA channels of dm644x and dm355 */
 #define DAVINCI_DMA_ASP0_TX	2
 #define DAVINCI_DMA_ASP0_RX	3

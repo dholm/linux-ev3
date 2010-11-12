@@ -50,6 +50,7 @@
 
 #define DA850_MMCSD_CD_PIN		GPIO_TO_PIN(4, 0)
 #define DA850_MMCSD_WP_PIN		GPIO_TO_PIN(4, 1)
+#define DA850_PRU_CAN_TRX_PIN	GPIO_TO_PIN(2, 0)
 
 #define DA850_MII_MDIO_CLKEN_PIN	GPIO_TO_PIN(2, 6)
 
@@ -1038,6 +1039,50 @@ static struct platform_device da850_gpio_i2c = {
 		.platform_data	= &da850_gpio_i2c_pdata,
 	},
 };
+
+static int __init da850_evm_config_pru_can(void)
+{
+    int ret;
+
+    if (!machine_is_davinci_da850_evm())
+        return 0;
+
+	ret = da8xx_pinmux_setup(da850_pru_can_pins);
+	if (ret)
+        pr_warning("da850_evm_init: da850_pru_can_pins mux setup failed: %d\n",
+                ret);
+
+	ret = gpio_request(DA850_PRU_CAN_TRX_PIN, "pru_can_en");
+    if (ret)
+         pr_warning("Cannot open GPIO %d\n", DA850_PRU_CAN_TRX_PIN);
+
+	/* value = 0 to enable the can transceiver */
+    gpio_direction_output(DA850_PRU_CAN_TRX_PIN, 0);
+    ret = da8xx_register_pru_can();
+    if (ret)
+        pr_warning("da850_evm_init: pru can registration failed: %d\n", ret);
+    return ret;
+}
+device_initcall(da850_evm_config_pru_can);
+
+static int __init da850_evm_config_pru_suart(void)
+{
+    int ret;
+
+    if (!machine_is_davinci_da850_evm())
+        return 0;
+
+    ret = da8xx_pinmux_setup(da850_pru_suart_pins);
+    if (ret)
+        pr_warning("da850_evm_init: da850_pru_suart_pins mux setup failed: %d\n",
+                ret);
+
+    ret = da8xx_register_pru_suart();
+    if (ret)
+        pr_warning("da850_evm_init: pru suart registration failed: %d\n", ret);
+    return ret;
+}
+device_initcall(da850_evm_config_pru_suart);
 
 static __init void da850_evm_init(void)
 {

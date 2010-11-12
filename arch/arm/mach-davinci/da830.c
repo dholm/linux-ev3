@@ -178,6 +178,13 @@ static struct clk mmcsd_clk = {
 	.lpsc		= DA8XX_LPSC0_MMC_SD,
 };
 
+static struct clk pru_clk = {
+   .name       = "pru_ck",
+   .parent     = &pll0_sysclk2,
+   .lpsc       = DA8XX_LPSC0_DMAX,
+   .flags      = ALWAYS_ENABLED,
+};
+
 static struct clk uart0_clk = {
 	.name		= "uart0",
 	.parent		= &pll0_sysclk2,
@@ -265,6 +272,19 @@ static struct clk eqep1_clk = {
 	.parent		= &pll0_sysclk2,
 	.lpsc		= DA830_LPSC1_EQEP,
 	.gpsc		= 1,
+};
+
+static struct clk mcasp_pru_clk = {
+   .name       = "mcasp_pru",
+   .parent     = &pll0_sysclk2,
+#if (CONFIG_OMAPL_SUART_MCASP == 0)
+   .lpsc       = DA8XX_LPSC1_McASP0,
+#elif (CONFIG_OMAPL_SUART_MCASP == 1)
+   .lpsc       = DA830_LPSC1_McASP1,
+#elif (CONFIG_OMAPL_SUART_MCASP == 2)
+   .lpsc       = DA830_LPSC1_McASP2,
+#endif
+   .gpsc       = 1,
 };
 
 static struct clk lcdc_clk = {
@@ -392,6 +412,7 @@ static struct clk_lookup da830_clks[] = {
 	CLK(NULL,		"tptc0",	&tptc0_clk),
 	CLK(NULL,		"tptc1",	&tptc1_clk),
 	CLK("davinci_mmc.0",	NULL,		&mmcsd_clk),
+	CLK(NULL,       "pru_ck",   &pru_clk),
 	CLK(NULL,		"uart0",	&uart0_clk),
 	CLK(NULL,		"uart1",	&uart1_clk),
 	CLK(NULL,		"uart2",	&uart2_clk),
@@ -414,6 +435,7 @@ static struct clk_lookup da830_clks[] = {
 	CLK(NULL,		"aintc",	&aintc_clk),
 	CLK(NULL,		"secu_mgr",	&secu_mgr_clk),
 	CLK("davinci_emac.1",	NULL,		&emac_clk),
+	CLK(NULL,   "mcasp_pru",    &mcasp_pru_clk),
 	CLK(NULL,		"gpio",		&gpio_clk),
 	CLK("i2c_davinci.2",	NULL,		&i2c1_clk),
 	CLK(NULL,		"usb11",	&usb11_clk),
@@ -873,6 +895,27 @@ const short da830_mmc_sd_pins[] __initdata = {
 const short da830_uart0_pins[] __initdata = {
 	DA830_NUART0_CTS, DA830_NUART0_RTS, DA830_UART0_RXD, DA830_UART0_TXD,
 	-1
+};
+
++
+const short da830_pru_suart_pins[] __initdata = {
+#if (CONFIG_OMAPL_SUART_MCASP == 0)
+    DA830_AHCLKX0, DA830_ACLKX0, DA830_AFSX0,
+    DA830_AHCLKR0, DA830_ACLKR0, DA830_AFSR0,
+	DA830_AXR0_13, DA830_AXR0_9, DA830_AXR0_7,
+	DA830_AXR0_14, DA830_AXR0_10, DA830_AXR0_8,
+#elif (CONFIG_OMAPL_SUART_MCASP == 1)
+    DA830_AHCLKX1, DA830_ACLKX1, DA830_AFSX1,
+    DA830_AHCLKR1, DA830_ACLKR1, DA830_AFSR1, DA830_AMUTE1,
+    DA830_AXR1_0, DA830_AXR1_1, DA830_AXR1_2, DA830_AXR1_3,
+    DA830_AXR1_4, DA830_AXR1_5, DA830_AXR1_6, DA830_AXR1_7,
+    DA830_AXR1_8, DA830_AXR1_9, DA830_AXR1_10, DA830_AXR1_11,
+#elif (CONFIG_OMAPL_SUART_MCASP == 2)
+    DA830_AHCLKX2, DA830_ACLKX2, DA830_AFSX2,
+    DA830_AHCLKR2, DA830_ACLKR2, DA830_AFSR2, DA830_AMUTE2,
+    DA830_AXR2_0, DA830_AXR2_1, DA830_AXR2_2, DA830_AXR2_3,
+#endif
+   -1
 };
 
 const short da830_uart1_pins[] __initdata = {
