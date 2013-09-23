@@ -886,6 +886,7 @@ void ieee80211_if_remove(struct ieee80211_sub_if_data *sdata)
  * Remove all interfaces, may only be called at hardware unregistration
  * time because it doesn't do RCU-safe list removals.
  */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33))
 void ieee80211_remove_interfaces(struct ieee80211_local *local)
 {
 	struct ieee80211_sub_if_data *sdata, *tmp;
@@ -902,6 +903,22 @@ void ieee80211_remove_interfaces(struct ieee80211_local *local)
 	mutex_unlock(&local->iflist_mtx);
 	unregister_netdevice_many(&unreg_list);
 }
+#else
+void ieee80211_remove_interfaces(struct ieee80211_local *local)
+{
+	struct ieee80211_sub_if_data *sdata, *tmp;
+
+	ASSERT_RTNL();
+
+	list_for_each_entry_safe(sdata, tmp, &local->interfaces, list) {
+		mutex_lock(&local->iflist_mtx);
+		list_del(&sdata->list);
+		mutex_unlock(&local->iflist_mtx);
+
+		unregister_netdevice(sdata->dev);
+	}
+}
+#endif
 
 static u32 ieee80211_idle_off(struct ieee80211_local *local,
 			      const char *reason)
