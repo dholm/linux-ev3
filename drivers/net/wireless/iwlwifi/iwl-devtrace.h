@@ -1,7 +1,9 @@
 #if !defined(__IWLWIFI_DEVICE_TRACE) || defined(TRACE_HEADER_MULTI_READ)
 #define __IWLWIFI_DEVICE_TRACE
 
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,27))
 #include <linux/tracepoint.h>
+#endif /* (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,27)) */
 #include "iwl-dev.h"
 
 #if !defined(CONFIG_IWLWIFI_DEVICE_TRACING) || defined(__CHECKER__)
@@ -194,4 +196,6 @@ TRACE_EVENT(iwlwifi_dev_ucode_event,
 #define TRACE_INCLUDE_PATH .
 #undef TRACE_INCLUDE_FILE
 #define TRACE_INCLUDE_FILE iwl-devtrace
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30))
 #include <trace/define_trace.h>
+#endif
