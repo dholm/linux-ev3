@@ -36,6 +36,7 @@
 #define SZ_32K                          0x00008000
 #define SZ_64K                          0x00010000
 #define SZ_128K                         0x00020000
+#define SZ_192K                         0x00030000    //ADDED JU 20120308
 #define SZ_256K                         0x00040000
 #define SZ_512K                         0x00080000
 

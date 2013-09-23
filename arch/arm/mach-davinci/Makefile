@@ -38,3 +38,5 @@ obj-$(CONFIG_SUSPEND)			+= pm.o sleep.o
 
 # DA850/OMAP-L138 McBSP driver
 obj-$(CONFIG_DAVINCI_MCBSP)		+= mcbsp.o
+
+obj-$(CONFIG_DAVINCI_C_FIQ)		+= davinci-iic.o 

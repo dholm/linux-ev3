@@ -299,7 +299,8 @@ static const struct serial8250_config uart_config[] = {
 		.name		= "AR7",
 		.fifo_size	= 16,
 		.tx_loadsz	= 16,
-		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_00,
+//		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_00,
+		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_10,
 		.flags		= UART_CAP_FIFO | UART_CAP_AFE,
 	},
 };
@@ -2304,8 +2305,8 @@ serial8250_set_termios(struct uart_port *port, struct ktermios *termios,
 	 * have sufficient FIFO entries for the latency of the remote
 	 * UART to respond.  IOW, at least 32 bytes of FIFO.
 	 */
-	if (up->capabilities & UART_CAP_AFE && up->port.fifosize >= 32) {
-		up->mcr &= ~UART_MCR_AFE;
+	if (up->capabilities & UART_CAP_AFE && up->port.fifosize >= 16) { // 16 was 32
+ 		up->mcr &= ~UART_MCR_AFE;
 		if (termios->c_cflag & CRTSCTS)
 			up->mcr |= UART_MCR_AFE;
 	}

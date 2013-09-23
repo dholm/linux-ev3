@@ -406,4 +406,7 @@
 /* da850 currently has the most irqs so use DA850_N_CP_INTC_IRQ */
 #define NR_IRQS				(DA850_N_CP_INTC_IRQ + DAVINCI_N_GPIO)
 
+
+#define FIQ_START 0
+
 #endif /* __ASM_ARCH_IRQS_H */

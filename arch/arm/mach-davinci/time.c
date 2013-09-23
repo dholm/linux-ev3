@@ -37,6 +37,7 @@ static unsigned int davinci_clock_tick_rate;
 enum {
 	TID_CLOCKEVENT,
 	TID_CLOCKSOURCE,
+	TID_FIQSOURCE,
 };
 
 /* Timer register offsets */
@@ -119,6 +120,9 @@ static int timer32_config(struct timer_s *t)
 	u32 tcr;
 	struct davinci_soc_info *soc_info = &davinci_soc_info;
 
+	//	if (strcmp("clockevent", t->name)) 
+	//	  printk(KERN_ERR "timer32_config() name=%s\n",t->name);
+
 	if (USING_COMPARE(t)) {
 		struct davinci_timer_instance *dtip =
 				soc_info->timer_info->timers;
@@ -170,8 +174,48 @@ static irqreturn_t timer_interrupt(int irq, void *dev_id)
 /* called when 32-bit counter wraps */
 static irqreturn_t freerun_interrupt(int irq, void *dev_id)
 {
-	return IRQ_HANDLED;
+  //  printk(KERN_ERR "freerun_interrupt\n");
+  return IRQ_HANDLED;
 }
+
+
+
+int (*fiq_func)(void *arg) = NULL;
+void *fiq_data=NULL;
+
+int fiq_register_callback(int (*func)(void *arg), void *data)
+{
+  fiq_data = data;
+  fiq_func = func;
+  return 0;
+}
+EXPORT_SYMBOL(fiq_register_callback);
+
+
+int fiq_set_time(int time)
+{
+  //printk("fiq_set_time(time=%d)\n", time);
+  timers[TID_FIQSOURCE].period = time*24; // Clock freq is 24MHz
+  return timer32_config(&timers[TID_FIQSOURCE]);
+}
+EXPORT_SYMBOL(fiq_set_time);
+
+
+static irqreturn_t fiq_interrupt(int irq, void *dev_id)
+{
+  //static int fiq_count=0;
+  //if ((fiq_count++ % 500) == 0)
+  //  printk(KERN_ERR "fiq_interrupt count=%u\n",fiq_count);
+  
+  if (fiq_func) {
+    if (!fiq_func(fiq_data)) {
+      fiq_register_callback(NULL, NULL);
+      fiq_set_time(10000);
+    }
+  }
+  return IRQ_HANDLED;
+}
+
 
 static struct timer_s timers[] = {
 	[TID_CLOCKEVENT] = {
@@ -191,6 +235,15 @@ static struct timer_s timers[] = {
 			.handler = freerun_interrupt,
 		}
 	},
+	[TID_FIQSOURCE] = {
+		.name       = "fiq counter",
+		.period     = 10000*24,
+		.opts       = TIMER_OPTS_PERIODIC,
+		.irqaction = {
+			.flags   = IRQF_DISABLED | IRQF_TIMER,
+			.handler = fiq_interrupt,
+		}
+	},
 };
 
 static void __init timer_init(void)
@@ -199,6 +252,7 @@ static void __init timer_init(void)
 	struct davinci_timer_instance *dtip = soc_info->timer_info->timers;
 	int i;
 
+	//printk(KERN_ERR "timer_init()\n");
 	/* Global init of each 64-bit timer as a whole */
 	for(i=0; i<2; i++) {
 		u32 tgcr;
@@ -266,6 +320,12 @@ static cycle_t read_cycles(struct clocksource *cs)
 	struct timer_s *t = &timers[TID_CLOCKSOURCE];
 
 	return (cycles_t)timer32_read(t);
+}
+
+
+u64 read_cycles_none(void)
+{
+ return read_cycles(NULL);
 }
 
 static struct clocksource clocksource_davinci = {
@@ -337,6 +397,7 @@ static void __init davinci_timer_init(void)
 
 	timers[TID_CLOCKEVENT].id = clockevent_id;
 	timers[TID_CLOCKSOURCE].id = clocksource_id;
+	timers[TID_FIQSOURCE].id = T1_TOP;
 
 	/*
 	 * If using same timer for both clock events & clocksource,
@@ -365,12 +426,19 @@ static void __init davinci_timer_init(void)
 	/* init timer hw */
 	timer_init();
 
+	//	timer_clk = clk_get(NULL, "timer1");
+	//	BUG_ON(IS_ERR(timer_clk));
+	//	clk_enable(timer_clk);
+	//	davinci_clock_tick_rate = clk_get_rate(timer_clk);
+	//	printk(KERN_ERR "timer1 - timer_clock_rate=%u\n",davinci_clock_tick_rate);
+
 	timer_clk = clk_get(NULL, "timer0");
 	BUG_ON(IS_ERR(timer_clk));
 	clk_enable(timer_clk);
 
 	davinci_clock_tick_rate = clk_get_rate(timer_clk);
-
+	//printk(KERN_ERR "timer0 - timer_clock_rate=%u\n",davinci_clock_tick_rate);
+	
 	/* setup clocksource */
 	clocksource_davinci.name = id_to_name[clocksource_id];
 	clocksource_davinci.mult =
@@ -403,6 +471,8 @@ void davinci_watchdog_reset(void)
 	struct platform_device *pdev = &davinci_wdt_device;
 	void __iomem *base = IO_ADDRESS(pdev->resource[0].start);
 	struct clk *wd_clk;
+	
+	//printk(KERN_ERR "------------ davinci_watchdog_reset()\n");
 
 	wd_clk = clk_get(&pdev->dev, NULL);
 	if (WARN_ON(IS_ERR(wd_clk)))

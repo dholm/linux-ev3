@@ -59,6 +59,7 @@
 
 /* Define max times to check status register before we give up. */
 #define	MAX_READY_WAIT_JIFFIES	(40 * HZ)	/* M25P16 specs 40s max chip erase */
+//#define	MAX_READY_WAIT_JIFFIES	(60 * HZ)	/* M25P16 specs 40s max chip erase */  // LEGO - CHANGED 20120315
 #define	MAX_CMD_SIZE		4
 
 #ifdef CONFIG_M25PXX_USE_FAST_READ

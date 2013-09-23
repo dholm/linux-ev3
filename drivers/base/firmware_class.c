@@ -487,15 +487,16 @@ _request_firmware(const struct firmware **firmware_p, const char *name,
 	     builtin++) {
 		if (strcmp(name, builtin->name))
 			continue;
-		dev_info(device, "firmware: using built-in firmware %s\n",
-			 name);
+// LEGO - 20120511
+//		dev_info(device, "firmware: using built-in firmware %s\n",
+//			 name);
 		firmware->size = builtin->size;
 		firmware->data = builtin->data;
 		return 0;
 	}
-
-	if (uevent)
-		dev_info(device, "firmware: requesting %s\n", name);
+// LEGO - 20120511
+//	if (uevent)
+//		dev_info(device, "firmware: requesting %s\n", name);
 
 	retval = fw_setup_device(firmware, &f_dev, name, device, uevent);
 	if (retval)

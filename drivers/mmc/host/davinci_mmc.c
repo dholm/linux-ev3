@@ -783,8 +783,9 @@ static void calculate_clk_divider(struct mmc_host *mmc, struct mmc_ios *ios)
 		temp = readl(host->base + DAVINCI_MMCCLK) & ~MMCCLK_CLKRT_MASK;
 		temp |= mmc_push_pull_freq;
 		writel(temp, host->base + DAVINCI_MMCCLK);
-
-		writel(temp | MMCCLK_CLKEN, host->base + DAVINCI_MMCCLK);
+		
+		// Do not set the CLKEN bit as it will make the clcok always run even if not required
+		// writel(temp | MMCCLK_CLKEN, host->base + DAVINCI_MMCCLK);
 
 		udelay(10);
 	}
@@ -1112,7 +1113,8 @@ static void __init init_mmcsd_host(struct mmc_davinci_host *host)
 	mmc_davinci_reset_ctrl(host, 1);
 
 	writel(0, host->base + DAVINCI_MMCCLK);
-	writel(MMCCLK_CLKEN, host->base + DAVINCI_MMCCLK);
+	// Do not set the CLKEN bit as it will make the clock always run 
+	//writel(MMCCLK_CLKEN, host->base + DAVINCI_MMCCLK);
 
 	writel(0x1FFF, host->base + DAVINCI_MMCTOR);
 	writel(0xFFFF, host->base + DAVINCI_MMCTOD);

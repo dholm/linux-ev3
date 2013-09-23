@@ -407,6 +407,31 @@ static struct clk sata_clk = {
 	.lpsc		= DA850_LPSC1_SATA,
 	.gpsc		= 1,
 };
+
+static struct clk ecap0_clk = {
+	.name		= "ecap0",
+	.parent		= &pll0_sysclk2,
+	.lpsc		= DA8XX_LPSC1_ECAP,
+	.flags		= DA850_CLK_ASYNC3,
+	.gpsc		= 1,
+};
+
+static struct clk ecap1_clk = {
+	.name		= "ecap1",
+	.parent		= &pll0_sysclk2,
+	.lpsc		= DA8XX_LPSC1_ECAP,
+	.flags		= DA850_CLK_ASYNC3,
+	.gpsc		= 1,
+};
+
+static struct clk ecap2_clk = {
+	.name		= "ecap2",
+	.parent		= &pll0_sysclk2,
+	.lpsc		= DA8XX_LPSC1_ECAP,
+	.flags		= DA850_CLK_ASYNC3,
+	.gpsc		= 1,
+};
+
 static struct clk_lookup da850_clks[] = {
 	CLK(NULL,		"ref",		&ref_clk),
 	CLK(NULL,		"pll0",		&pll0_clk),
@@ -458,6 +483,9 @@ static struct clk_lookup da850_clks[] = {
 	CLK(NULL,		"usb11",	&usb11_clk),
 	CLK(NULL,		"usb20",	&usb20_clk),
 	CLK(NULL,		"ahci",		&sata_clk),
+	CLK(NULL,		"ecap0",	&ecap0_clk),
+	CLK(NULL,		"ecap1",	&ecap1_clk),
+	CLK(NULL,		"ecap2",	&ecap2_clk),
 
 	CLK(NULL,		NULL,		NULL),
 };
@@ -480,9 +508,15 @@ static const struct mux_config da850_pins[] = {
 	MUX_CFG(DA850, UART0_RXD,	3,	16,	15,	2,	false)
 	MUX_CFG(DA850, UART0_TXD,	3,	20,	15,	2,	false)
 	/* UART1 function */
+	MUX_CFG(DA850, NUART1_CTS,	0,	20,	15,	4,	false)
+	MUX_CFG(DA850, NUART1_RTS,	0,	16,	15,	4,	false)
 	MUX_CFG(DA850, UART1_RXD,	4,	24,	15,	2,	false)
 	MUX_CFG(DA850, UART1_TXD,	4,	28,	15,	2,	false)
+	MUX_CFG(DA850, GPIO0_15,	0,	0,	15,	8,	false)
 	/* UART2 function */
+	MUX_CFG(DA850, NUART2_CTS,	0,	28,	15,	4,	false) // LEGO BT UART CTRL
+	MUX_CFG(DA850, NUART2_RTS,	0,	24,	15,	4,	false) // LEGO BT UART CTRL
+
 	MUX_CFG(DA850, UART2_RXD,	4,	16,	15,	2,	false)
 	MUX_CFG(DA850, UART2_TXD,	4,	20,	15,	2,	false)
 	/* I2C1 function */
@@ -623,6 +657,11 @@ static const struct mux_config da850_pins[] = {
     MUX_CFG(DA850, PRU0_R31_0,  7,  28, 15, 0,  false)
     MUX_CFG(DA850, PRU1_R30_15, 12, 0,  15, 4,  false)
     MUX_CFG(DA850, PRU1_R31_18, 11, 20,  15, 0,  false)
+	/* SPI0 function */
+	MUX_CFG(DA850, SPI0_CS_0,	4,	4,	15,	1,	false)
+	MUX_CFG(DA850, SPI0_CLK,	3,	0,	15,	1,	false)
+	MUX_CFG(DA850, SPI0_SOMI,	3,	8,	15,	1,	false)
+	MUX_CFG(DA850, SPI0_SIMO,	3,	12,	15,	1,	false)
 	/* SPI1 function */
 	MUX_CFG(DA850, SPI1_CS_0,	5,	4,	15,	1,	false)
 	MUX_CFG(DA850, SPI1_CLK,	5,	8,	15,	1,	false)
@@ -632,15 +671,27 @@ static const struct mux_config da850_pins[] = {
 	MUX_CFG(DA850, GPIO2_0,     6,  28, 15, 8,  false)
 	MUX_CFG(DA850, GPIO2_6,		6,	4,	15,	8,	false)
 	MUX_CFG(DA850, GPIO2_8,		5,	28,	15,	8,	false)
+	MUX_CFG(DA850, GPIO2_11,	5,	16,	15,	8,	false)
+	MUX_CFG(DA850, GPIO2_12,	5,	12,	15,	8,	false)
 	MUX_CFG(DA850, GPIO2_15,	5,	0,	15,	8,	false)
 	MUX_CFG(DA850, GPIO4_0,		10,	28,	15,	8,	false)
 	MUX_CFG(DA850, GPIO4_1,		10,	24,	15,	8,	false)
+	MUX_CFG(DA850, GPIO4_2,		10,	20,	15,	8,	false)
+	MUX_CFG(DA850, GPIO4_9,		9,	24,	15,	8,	false) // LEGO BT Shutdown - EP2
+	MUX_CFG(DA850, GPIO5_0,		12,	28,	15,	8,	false)
 	MUX_CFG(DA850, RTC_ALARM,	0,	28,	15,	2,	false)
 	MUX_CFG(DA850, GPIO7_4,		17,	20,	15,	8,	false)
+	MUX_CFG(DA850, GPIO7_9,		17,	0,	15,	8,	false)
+	MUX_CFG(DA850, GPIO7_10,	16,	28,	15,	8,	false)
 	MUX_CFG(DA850, GPIO2_4,		6,	12,	15,	8,	false)
+  	MUX_CFG(DA850, GPIO6_3,		19,	12,	15,	8,	false)
+	MUX_CFG(DA850, GPIO6_11,	13,	16,	15,	8,	false)
 	MUX_CFG(DA850, GPIO6_13,	13,	8,	15,	8,	false)
+	MUX_CFG(DA850, GPIO6_14,	13,	4,	15,	8,	false)
+	MUX_CFG(DA850, GPIO6_15,	13,	0,	15,	8,	false)  // LEGO BT ENABLE	
 	MUX_CFG(DA850, GPIO1_4,		4,	12,	15,	8,	false)
 	MUX_CFG(DA850, GPIO1_5,		4,	8,	15,	8,	false)
+	MUX_CFG(DA850, GPIO0_11,	0,	16,	15,	8,	false)
 
 	/* McBSP0 function */
 	MUX_CFG(DA850,	MCBSP0_CLKR,	2,	4,	15,	2,	false)
@@ -698,6 +749,10 @@ static const struct mux_config da850_pins[] = {
 	MUX_CFG(DA850, VPIF_DOUT15,	17,	8,	15,	1,	false)
 	MUX_CFG(DA850, VPIF_CLKO2,	19,	12,	15,	1,	false)
 	MUX_CFG(DA850, VPIF_CLKO3,	19,	20,	15,	1,	false)
+	/* Bluetooth slow clock */						// LEGO BT
+	MUX_CFG(DA850, ECAP2_OUT,	 1,	0,	15,	4,	false)  // LEGO BT
+	MUX_CFG(DA850, ECAP2_OUT_ENABLE, 0,	12,	15,	8,	false)  // LEGO BT
+
 #endif
 };
 
@@ -707,7 +762,7 @@ const short da850_uart0_pins[] __initdata = {
 };
 
 const short da850_pru_can_pins[] __initdata = {
-	DA850_GPIO2_0, DA850_PRU0_R31_0, DA850_PRU1_R30_15,
+	DA850_GPIO7_9,DA850_GPIO7_10,DA850_GPIO2_0, DA850_PRU0_R31_0, DA850_PRU1_R30_15,
 	DA850_PRU1_R31_18,
 	-1
 };
@@ -715,23 +770,56 @@ const short da850_pru_can_pins[] __initdata = {
 const short da850_pru_suart_pins[] __initdata = {
 	DA850_AHCLKX, DA850_ACLKX, DA850_AFSX,
     DA850_AHCLKR, DA850_ACLKR, DA850_AFSR,
+    DA850_AXR_1, DA850_AXR_2, DA850_AXR_3,
+	DA850_AXR_4, 
+	-1
+};
+/* TI
+const short da850_pru_suart_pins[] __initdata = {
+	DA850_AHCLKX, DA850_ACLKX, DA850_AFSX,
+    DA850_AHCLKR, DA850_ACLKR, DA850_AFSR,
     DA850_AXR_13, DA850_AXR_9, DA850_AXR_7,
 	DA850_AXR_14, DA850_AXR_10, DA850_AXR_8,
 	-1
 };
-
+*/
 const short da850_uart1_pins[] __initdata = {
 	DA850_UART1_RXD, DA850_UART1_TXD,
+	DA850_NUART1_CTS,DA850_NUART1_RTS,
 	-1
 };
+
+//const short da850_uart2_pins[] __initdata = {
+//	DA850_UART2_RXD, DA850_UART2_TXD,
+//	-1
+//};
 
 const short da850_uart2_pins[] __initdata = {
 	DA850_UART2_RXD, DA850_UART2_TXD,
+	DA850_NUART2_CTS, DA850_NUART2_RTS,     // LEGO BT
+//#ifdef CONFIG_WIFI_CONTROL_FUNC                 // LEGO BT
+        DA850_GPIO0_15,                         // LEGO BT
+//#endif                                          // LEGO BT
+
 	-1
 };
 
+
+const short da850_bt_slow_clock_pin[] __initdata = {	//LEGO BT
+	DA850_ECAP2_OUT,				//LEGO BT
+	DA850_ECAP2_OUT_ENABLE,				//LEGO BT
+	-1						//LEGO BT
+};							//LEGO BT
+
+const short da850_bt_shut_down_pin[] __initdata = {	//LEGO BT
+	DA850_GPIO4_1,					//LEGO BT
+        DA850_GPIO4_9,                                  //LEGO BT - EP2
+	-1						//LEGO BT
+};							//LEGO BT
+
 const short da850_i2c0_pins[] __initdata = {
-	DA850_GPIO1_4, DA850_GPIO1_5,
+//	DA850_GPIO1_4, DA850_GPIO1_5,
+	DA850_I2C0_SCL, DA850_I2C0_SDA,
 	-1
 };
 
@@ -781,6 +869,15 @@ const short da850_mmcsd0_pins[] __initdata = {
 	-1
 };
 
+//Lego - DAT3 is CD ..DAT3 is Muxed with GPIO_$_2
+
+/*const short da850_mmcsd0_pins[] __initdata = {
+	DA850_MMCSD0_DAT_0, DA850_MMCSD0_DAT_1, DA850_MMCSD0_DAT_2,
+	DA850_MMCSD0_CLK, DA850_MMCSD0_CMD,
+	DA850_GPIO4_2, DA850_GPIO4_1,
+	-1
+};*/
+
 const short da850_nand_pins[] __initdata = {
 	DA850_EMA_D_7, DA850_EMA_D_6, DA850_EMA_D_5, DA850_EMA_D_4,
 	DA850_EMA_D_3, DA850_EMA_D_2, DA850_EMA_D_1, DA850_EMA_D_0,
@@ -802,6 +899,11 @@ const short da850_nor_pins[] __initdata = {
 	DA850_EMA_A_14, DA850_EMA_A_15, DA850_EMA_A_16, DA850_EMA_A_17,
 	DA850_EMA_A_18, DA850_EMA_A_19, DA850_EMA_A_20, DA850_EMA_A_21,
 	DA850_EMA_A_22, DA850_EMA_A_23,
+	-1
+};
+
+const short da850_spi0_pins[] __initdata = {
+	DA850_SPI0_CS_0, DA850_SPI0_CLK, DA850_SPI0_SOMI, DA850_SPI0_SIMO,
 	-1
 };
 
@@ -843,7 +945,8 @@ const short da850_vpif_display_pins[] __initdata = {
 };
 
 const short da850_evm_usb11_pins[] __initdata = {
-	DA850_GPIO2_4, DA850_GPIO6_13, -1
+//	DA850_GPIO6_11, DA850_GPIO6_14, -1
+	DA850_GPIO6_3, -1
 };
 
 const short da850_sata_pins[] __initdata = {
@@ -877,7 +980,7 @@ static u8 da850_default_priorities[DA850_N_CP_INTC_IRQ] = {
 	[IRQ_DA8XX_TINT12_0]		= 7,
 	[IRQ_DA8XX_TINT34_0]		= 7,
 	[IRQ_DA8XX_TINT12_1]		= 7,
-	[IRQ_DA8XX_TINT34_1]		= 7,
+	[IRQ_DA8XX_TINT34_1]		= 0,
 	[IRQ_DA8XX_UARTINT0]		= 7,
 	[IRQ_DA8XX_KEYMGRINT]		= 7,
 	[IRQ_DA8XX_SECINT]		= 7,
@@ -920,8 +1023,8 @@ static u8 da850_default_priorities[DA850_N_CP_INTC_IRQ] = {
 	[IRQ_DA8XX_GPIO2]		= 7,
 	[IRQ_DA8XX_GPIO3]		= 7,
 	[IRQ_DA8XX_GPIO4]		= 7,
-	[IRQ_DA8XX_GPIO5]		= 7,
-	[IRQ_DA8XX_GPIO6]		= 7,
+	[IRQ_DA8XX_GPIO5]		= 2,
+	[IRQ_DA8XX_GPIO6]		= 2,
 	[IRQ_DA8XX_GPIO7]		= 7,
 	[IRQ_DA8XX_GPIO8]		= 7,
 	[IRQ_DA8XX_I2CINT1]		= 7,
@@ -1009,12 +1112,20 @@ static void __iomem *da850_psc_bases[] = {
 /* Contents of JTAG ID register used to identify exact cpu type */
 static struct davinci_id da850_ids[] = {
 	{
-		.variant	= 0x0,
+		.variant	= 0x1,  //was 0x0
 		.part_no	= 0xb7d1,
 		.manufacturer	= 0x017,	/* 0x02f >> 1 */
 		.cpu_id		= DAVINCI_CPU_ID_DA850,
 		.name		= "da850/omap-l138",
 	},
+	{
+		.variant	= 0x1,
+		.part_no	= 0xb7d1,
+		.manufacturer	= 0x017,	/* 0x02f >> 1 */
+		.cpu_id		= DAVINCI_CPU_ID_DA850,
+		.name		= "da850/omap-l138/am18xx",
+	},
+
 };
 
 static struct davinci_timer_instance da850_timer_instance[4] = {
@@ -1458,6 +1569,17 @@ void __init da850_init(void)
 	da8xx_syscfg1_base = ioremap(DA8XX_SYSCFG1_BASE, SZ_4K);
 	if (WARN(!da8xx_syscfg1_base, "Unable to map syscfg1 module"))
 		return;
+
+
+	da8xx_psc1_base = ioremap(DA8XX_PSC1_BASE, SZ_4K);		// LEGO BT slow clock
+	if (WARN(!da8xx_psc1_base, "Unable to map psc1 module"))	// LEGO BT slow clock
+		return;							// LEGO BT slow clock
+
+	da8xx_ecap2_base = ioremap(DA8XX_ECAP2_BASE, SZ_4K);		// LEGO BT slow clock
+	if (WARN(!da8xx_ecap2_base, "Unable to map ecap2 module"))	// LEGO BT slow clock
+		return;							// LEGO BT slow clock
+
+
 
 	davinci_soc_info_da850.jtag_id_base =
 					DA8XX_SYSCFG0_VIRT(DA8XX_JTAG_ID_REG);

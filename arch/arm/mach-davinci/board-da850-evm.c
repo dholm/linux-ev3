@@ -28,6 +28,7 @@
 #include <linux/spi/spi.h>
 #include <linux/spi/flash.h>
 #include <linux/usb/musb.h>
+#include <linux/usb/g_hid.h>
 #include <linux/i2c-gpio.h>
 
 #include <asm/mach-types.h>
@@ -41,6 +42,7 @@
 #include <mach/vpif.h>
 
 #include <media/tvp514x.h>
+#include <video/st7586fb.h>
 
 #define DA850_EVM_PHY_MASK		0x1
 #define DA850_EVM_MDIO_FREQUENCY	2200000 /* PHY bus frequency */
@@ -48,19 +50,39 @@
 #define DA850_LCD_PWR_PIN		GPIO_TO_PIN(2, 8)
 #define DA850_LCD_BL_PIN		GPIO_TO_PIN(2, 15)
 
-#define DA850_MMCSD_CD_PIN		GPIO_TO_PIN(4, 0)
-#define DA850_MMCSD_WP_PIN		GPIO_TO_PIN(4, 1)
+//#define DA850_MMCSD_CD_PIN		GPIO_TO_PIN(4, 0)
+#define DA850_MMCSD_CD_PIN		GPIO_TO_PIN(4, 2) //Lego
+//#define DA850_MMCSD_WP_PIN		GPIO_TO_PIN(4, 1) //Lego
 #define DA850_PRU_CAN_TRX_PIN	GPIO_TO_PIN(2, 0)
 
 #define DA850_MII_MDIO_CLKEN_PIN	GPIO_TO_PIN(2, 6)
+
+#define DA850_BT_EN			GPIO_TO_PIN(0, 15)
+
 
 #define TVP5147_CH0		"tvp514x-0"
 #define TVP5147_CH1		"tvp514x-1"
 
 #define VPIF_STATUS	(0x002C)
 #define VPIF_STATUS_CLR	(0x0030)
-#define DA850_USB1_VBUS_PIN		GPIO_TO_PIN(2, 4)
-#define DA850_USB1_OC_PIN		GPIO_TO_PIN(6, 13)
+#define DA850_USB1_VBUS_PIN		GPIO_TO_PIN(1, 4) //GPIO_TO_PIN(6, 14) //GPIO_TO_PIN(2, 4)
+#define DA850_USB1_OC_PIN		GPIO_TO_PIN(6, 3) //GPIO_TO_PIN(6, 11) //GPIO_TO_PIN(6, 13)
+
+#define  DA850_BT_SHUT_DOWN		GPIO_TO_PIN(4, 1)      //LEGO BT
+#define  DA850_BT_SHUT_DOWN_EP2		GPIO_TO_PIN(4, 9)      //LEGO BT
+
+static struct davinci_spi_platform_data da850_spi0_pdata = {
+        .version        = SPI_VERSION_2,
+        .num_chipselect = 1,
+        .intr_line      = 1,
+};
+
+static struct davinci_spi_platform_data da850_spi1_pdata = {
+        .version        = SPI_VERSION_2,
+        .num_chipselect = 1,
+        .intr_line      = 1,
+};
+
 
 static struct mtd_partition da850_evm_norflash_partition[] = {
 	{
@@ -219,12 +241,46 @@ static struct platform_device *da850_evm_devices[] __initdata = {
 	&da850_evm_nandflash_device,
 	&da850_evm_norflash_device,
 };
-
-static struct mtd_partition spi_flash_partitions[] = {
+// LEGO CHANGED - 20120425 + 20120830
+static struct mtd_partition spi0_flash_partitions[] = {
 	[0] = {
 		.name = "U-Boot",
 		.offset = 0,
 		.size = SZ_256K,
+		.mask_flags = MTD_WRITEABLE,
+	},
+	[1] = {
+		.name = "U-Boot Env",
+		.offset = MTDPART_OFS_APPEND,
+		.size = SZ_64K,
+		.mask_flags = MTD_WRITEABLE,
+	},
+	[2] = {
+		.name = "Kernel",
+		.offset = MTDPART_OFS_NXTBLK,
+		.size = SZ_2M,
+		.mask_flags = 0,
+	},
+	[3] = {
+		.name = "Filesystem",
+		.offset = MTDPART_OFS_NXTBLK,
+		.size = SZ_8M + SZ_2M + SZ_256K + SZ_128K,
+		.mask_flags = 0,
+	},
+	[4] = {
+		.name = "Storage",
+		.offset = MTDPART_OFS_NXTBLK,
+		.size = SZ_2M + SZ_1M + SZ_256K + SZ_64K,
+		.mask_flags = 0,
+	},
+
+};
+/*
+static struct mtd_partition spi1_display_partitions[] = {
+	[0] = {
+		.name = "U-Boot",
+		.offset = 0,
+		.size = SZ_128K + SZ_64K,
 		.mask_flags = MTD_WRITEABLE,
 	},
 	[1] = {
@@ -234,38 +290,138 @@ static struct mtd_partition spi_flash_partitions[] = {
 		.mask_flags = MTD_WRITEABLE,
 	},
 	[2] = {
-		.name = "Linux",
+		.name = "Linux uImage",
 		.offset = MTDPART_OFS_NXTBLK,
-		.size = SZ_8M - (SZ_256K + SZ_64K + SZ_64K),
+		.size = SZ_2M + SZ_64K,
 		.mask_flags = 0,
 	},
 	[3] = {
-		.name = "MAC Address",
+		.name = "File System (CRAMFS) ",
 		.offset = MTDPART_OFS_NXTBLK,
-		.size = SZ_64K,
-		.mask_flags = MTD_WRITEABLE,
-		.setup = davinci_get_mac_addr,
-		.context = (void *)0,
+		.size = SZ_8M + SZ_2M + SZ_256K + SZ_128K,
+		.mask_flags = 0,
 	},
+	[4] = {
+		.name = "User Data (RAMDisk)",
+		.offset = MTDPART_OFS_NXTBLK,
+		.size = SZ_2M + SZ_1M + SZ_256K + SZ_64K,
+		.mask_flags = 0,
+	},
+
+};
+*/
+/*
+// LEGO - Early MTD config
+static struct mtd_partition spi0_flash_partitions[] = {
+        [0] = {
+                .name = "U-Boot",
+                .offset = 0,
+                .size = SZ_256K,
+                .mask_flags = MTD_WRITEABLE,
+        },
+        [1] = {
+                .name = "U-Boot Environment",
+                .offset = MTDPART_OFS_APPEND,
+                .size = SZ_64K,
+                .mask_flags = MTD_WRITEABLE,
+        },
+        [2] = {
+                .name = "Linux uImage",
+                .offset = MTDPART_OFS_NXTBLK,
+                .size = SZ_8M - (SZ_256K + SZ_64K + SZ_64K),
+                .mask_flags = 0,
+        },
+};
+*/
+static struct flash_platform_data spi0_flash_data = {
+	.name = "m25p80",
+	.parts = spi0_flash_partitions,
+	.nr_parts = ARRAY_SIZE(spi0_flash_partitions),
+	//.type = "m25p64",
+	.type = "s25sl12801",
+};
+/*
+static struct flash_platform_data spi1_display_data = {
+	.name = "st7586fb",
+	.parts = spi1_display_partitions,
+	.nr_parts = ARRAY_SIZE(spi1_display_partitions),
+	//.type = "m25p64",
+//	.type = "s25sl12801",
+};
+*/
+static const struct st7586fb_platform_data lms2012_st7586fb_data = {
+	.rst_gpio	= GPIO_TO_PIN(5, 0),
+	.a0_gpio	= GPIO_TO_PIN(2, 11),
+	.cs_gpio	= GPIO_TO_PIN(2, 12),
 };
 
-static struct flash_platform_data spi_flash_data = {
-	.name = "m25p80",
-	.parts = spi_flash_partitions,
-	.nr_parts = ARRAY_SIZE(spi_flash_partitions),
-	.type = "m25p64",
+
+static struct davinci_spi_config da850_spiflash_cfg = {
+	.io_type	= SPI_IO_TYPE_DMA,
+	.c2tdelay	= 8,
+	.t2cdelay	= 8,
 };
+
+
+
+static struct davinci_spi_config lms2012_st7586fb_cfg = {
+        .io_type	= SPI_IO_TYPE_DMA,
+        .c2tdelay	= 10,
+        .t2cdelay	= 10,
+ };
 
 static struct spi_board_info da850_spi_board_info[] = {
-	[0] = {
+	[0] = { // SPI0
 		.modalias = "m25p80",
-		.platform_data = &spi_flash_data,
+		.platform_data = &spi0_flash_data,
+// LEGO - CHANGED 20120830
+		.controller_data= &da850_spiflash_cfg,
 		.mode = SPI_MODE_0,
-		.max_speed_hz = 30000000,       /* max sample rate at 3V */
-		.bus_num = 1,
+//		.max_speed_hz = 30000000,       /* max sample rate at 3V */
+		.max_speed_hz = 50000000,       /* max sample rate at 3V */
+// LEGO - CHANGE END
+		.bus_num = 0,
 		.chip_select = 0,
 	},
+	[1] = { // SPI1
+//		.modalias = "st7586fb",
+//		.platform_data = &spi1_display_data,
+//		.controller_data= &da850_spidisplay_cfg,
+//		.mode = SPI_MODE_0,
+//		.max_speed_hz = 30000000,       /* max sample rate at 3V */
+//		.bus_num = 1,
+//		.chip_select = 0,
+		.modalias		= "lms2012_lcd",
+		.platform_data		= &lms2012_st7586fb_data,
+		.controller_data	= &lms2012_st7586fb_cfg,
+		.mode			= SPI_MODE_3 | SPI_NO_CS,
+		.max_speed_hz		= 10000000,
+ 		.bus_num		= 1,
+ 		.chip_select		= 0,
+
+    },
 };
+
+
+static void __init da850_init_spi(struct spi_board_info *info, unsigned len)
+{
+        int ret;
+
+	printk ("start  da850_init_spi %d\n");      
+	ret = spi_register_board_info(info, len);
+        if (ret)
+                pr_warning("failed to register board info : %d\n", ret);
+
+        ret = da8xx_register_spi(0, &da850_spi0_pdata);
+        if (ret)
+                pr_warning("failed to register spi 0 device : %d\n", ret);
+        
+	ret = da8xx_register_spi(1, &da850_spi1_pdata);
+        if (ret)
+                pr_warning("failed to register spi 1 device : %d\n", ret);
+
+	printk ("end  da850_init_spi %d\n");    
+}
 
 static u32 ui_card_detected;
 
@@ -318,6 +474,13 @@ static inline void da850_evm_setup_char_lcd(int a, int b, int c)
 #else
 static inline void da850_evm_setup_char_lcd(int a, int b, int c) { }
 #endif
+static struct at24_platform_data da850_evm_i2c_eeprom_info = {
+	.byte_len = SZ_256K/8,
+	.page_size = 64,
+	.flags	= AT24_FLAG_ADDR16,
+	.setup  = davinci_get_mac_addr,
+	.context = (void*)0x7f00,
+};
 
 #ifdef CONFIG_DA850_UI_VIDEO_PORT
 static inline void da850_evm_setup_video_port(int video_sel)
@@ -544,19 +707,38 @@ static struct tps6507x_board tps_board = {
 
 static struct i2c_board_info __initdata da850_evm_i2c_devices[] = {
 	{
-		I2C_BOARD_INFO("tps6507x", 0x48),
-		.platform_data = &tps_board,
+//		I2C_BOARD_INFO("tps6507x", 0x48),
+//		.platform_data = &tps_board,
+//	},
+//	{
+//		I2C_BOARD_INFO("tlv320aic3x", 0x18),
+//	},
+//	{
+//		I2C_BOARD_INFO("tca6416", 0x20),
+//		.platform_data = &da850_evm_ui_expander_info,
+//	},
+//	{
+		I2C_BOARD_INFO("24FC128", 0x50),
 	},
 	{
-		I2C_BOARD_INFO("tlv320aic3x", 0x18),
+		I2C_BOARD_INFO("PIC_CodedDataTo", 0x54),
 	},
 	{
-		I2C_BOARD_INFO("tca6416", 0x20),
-		.platform_data = &da850_evm_ui_expander_info,
+		I2C_BOARD_INFO("PIC_ReadStatus", 0x55),
 	},
 	{
-		I2C_BOARD_INFO("cdce913", 0x65),
+		I2C_BOARD_INFO("PIC_RawDataTo", 0x56),
 	},
+	{
+		I2C_BOARD_INFO("PIC_ReadDataFrom", 0x57),
+	},
+
+
+};
+
+static struct davinci_i2c_platform_data lego_i2c_0_pdata = {
+	.bus_freq	= 400	/* kHz */,
+	.bus_delay	= 0	/* usec */,
 };
 
 static struct davinci_uart_config da850_evm_uart_config __initdata = {
@@ -592,19 +774,20 @@ static struct davinci_mcbsp_platform_data da850_mcbsp1_config = {
 	.inst	= 1,
 };
 
-static int da850_evm_mmc_get_ro(int index)
-{
-	return gpio_get_value(DA850_MMCSD_WP_PIN);
-}
+//static int da850_evm_mmc_get_ro(int index)
+//{
+//	return gpio_get_value(DA850_MMCSD_WP_PIN);
+//}
 
 static int da850_evm_mmc_get_cd(int index)
 {
-	return !gpio_get_value(DA850_MMCSD_CD_PIN);
+//	return !gpio_get_value(DA850_MMCSD_CD_PIN);
+	return 1 ;
 }
 
 static struct davinci_mmc_config da850_mmc_config = {
-	.get_ro		= da850_evm_mmc_get_ro,
-	.get_cd		= da850_evm_mmc_get_cd,
+//	.get_ro		= da850_evm_mmc_get_ro,
+//	.get_cd		= da850_evm_mmc_get_cd,
 	.wires		= 4,
 	.max_freq	= 50000000,
 	.caps		= MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED,
@@ -674,49 +857,49 @@ static int __init da850_evm_config_emac(void)
 
 	val = __raw_readl(cfg_chip3_base);
 
-	if (rmii_en) {
-		val |= BIT(8);
-		ret = da8xx_pinmux_setup(da850_rmii_pins);
-		pr_info("EMAC: RMII PHY configured, MII PHY will not be"
-							" functional\n");
-	} else {
-		val &= ~BIT(8);
-		ret = da8xx_pinmux_setup(da850_cpgmac_pins);
-		pr_info("EMAC: MII PHY configured, RMII PHY will not be"
-							" functional\n");
-	}
+//	if (rmii_en) {
+//		val |= BIT(8);
+//		ret = da8xx_pinmux_setup(da850_rmii_pins);
+//		pr_info("EMAC: RMII PHY configured, MII PHY will not be"
+//							" functional\n");
+//	} else {
+//		val &= ~BIT(8);
+//		ret = da8xx_pinmux_setup(da850_cpgmac_pins);
+//		pr_info("EMAC: MII PHY configured, RMII PHY will not be"
+//							" functional\n");
+//	}
 
-	if (ret)
-		pr_warning("da850_evm_init: cpgmac/rmii mux setup failed: %d\n",
-				ret);
+//	if (ret)
+//		pr_warning("da850_evm_init: cpgmac/rmii mux setup failed: %d\n",
+//				ret);
 
 	/* configure the CFGCHIP3 register for RMII or MII */
-	__raw_writel(val, cfg_chip3_base);
+//	__raw_writel(val, cfg_chip3_base);
 
-	ret = davinci_cfg_reg(DA850_GPIO2_6);
-	if (ret)
-		pr_warning("da850_evm_init:GPIO(2,6) mux setup "
-							"failed\n");
+//	ret = davinci_cfg_reg(DA850_GPIO2_6);
+//	if (ret)
+//		pr_warning("da850_evm_init:GPIO(2,6) mux setup "
+//							"failed\n");
 
-	ret = gpio_request(DA850_MII_MDIO_CLKEN_PIN, "mdio_clk_en");
-	if (ret) {
-		pr_warning("Cannot open GPIO %d\n",
-					DA850_MII_MDIO_CLKEN_PIN);
-		return ret;
-	}
+//	ret = gpio_request(DA850_MII_MDIO_CLKEN_PIN, "mdio_clk_en");
+//	if (ret) {
+//		pr_warning("Cannot open GPIO %d\n",
+//					DA850_MII_MDIO_CLKEN_PIN);
+//		return ret;
+//	}
 
 	/* Enable/Disable MII MDIO clock */
-	gpio_direction_output(DA850_MII_MDIO_CLKEN_PIN, rmii_en);
+//	gpio_direction_output(DA850_MII_MDIO_CLKEN_PIN, rmii_en);
 
-	soc_info->emac_pdata->phy_mask = DA850_EVM_PHY_MASK;
-	soc_info->emac_pdata->mdio_max_freq = DA850_EVM_MDIO_FREQUENCY;
+//	soc_info->emac_pdata->phy_mask = DA850_EVM_PHY_MASK;
+//	soc_info->emac_pdata->mdio_max_freq = DA850_EVM_MDIO_FREQUENCY;
 
-	ret = da8xx_register_emac();
-	if (ret)
-		pr_warning("da850_evm_init: emac registration failed: %d\n",
-				ret);
+//	ret = da8xx_register_emac();
+//	if (ret)
+//		pr_warning("da850_evm_init: emac registration failed: %d\n",
+//				ret);
 
-	return 0;
+//	return 0;
 }
 device_initcall(da850_evm_config_emac);
 
@@ -913,7 +1096,8 @@ static da8xx_ocic_handler_t da850_evm_usb_ocic_handler;
 
 static int da850_evm_usb_set_power(unsigned port, int on)
 {
-	gpio_set_value(DA850_USB1_VBUS_PIN, on);
+	pr_info("da850_evm_usb_set_power\n");	
+	gpio_set_value(DA850_USB1_VBUS_PIN, on); //on on AM18xx EVM
 	return 0;
 }
 
@@ -934,8 +1118,11 @@ static int da850_evm_usb_ocic_notify(da8xx_ocic_handler_t handler)
 	int irq 	= gpio_to_irq(DA850_USB1_OC_PIN);
 	int error	= 0;
 
+	pr_info("da850_evm_usb_ocic_notify\n");
+
 	if (handler != NULL) {
 		da850_evm_usb_ocic_handler = handler;
+		pr_info("da850_evm_usb_ocic_handler = handler\n");
 
 		error = request_irq(irq, da850_evm_usb_ocic_irq, IRQF_DISABLED |
 				    IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
@@ -961,9 +1148,116 @@ static struct da8xx_ohci_root_hub da850_evm_usb11_pdata = {
 
 static irqreturn_t da850_evm_usb_ocic_irq(int irq, void *dev_id)
 {
+	pr_info("da850_evm_usb_ocic_irq\n");	
 	da850_evm_usb_ocic_handler(&da850_evm_usb11_pdata, 1);
+	pr_info("da850_evm_usb_ocic_handler\n");
 	return IRQ_HANDLED;
 }
+
+/* hid descriptor for a test */
+static struct hidg_func_descriptor rudolf_hid1_data = {
+	.subclass		= 0, /* Subclass NONE */
+	.protocol		= 0, /* Protocol NONE */
+	.report_length		= 0x40,
+	.report_desc_length	= 25,
+	.report_desc		= {
+
+		0x06, 0x00, 0xFF, // Usage page (vendor defined) 
+      		0x09, 0x01, // Usage ID (vendor defined) 
+      		0xA1, 0x01, // Collection (application) 
+
+    		// The Input report 
+        	// 0x09, 0x03,       // Usage ID - vendor defined 
+        	0x15, 0x00,       // Logical Minimum (0) 
+        	0x26, 0xFF, 0x00,   // Logical Maximum (255) 
+        	0x75, 0x08,       // Report Size (8 bits) 
+        	0x95, 0x40,       // Report Count (64 fields)
+ 
+		0x09, 0x01,	  // USAGE (vendor usage 1)
+        	0x81, 0x02,       // Input (Data, Variable, Absolute) 
+
+		0x09, 0x01,	  // USAGE (vendor usage 1)
+        	0x91, 0x02,       // Output (Data, Variable, Absolute) 
+
+      		0xc0		/* END_COLLECTION                         */
+
+		}
+};
+
+static struct platform_device rudolf_hid1 = {
+	.name			= "hidg",
+	.id			= 0,
+	.num_resources		= 0,
+	.resource		= 0,
+	.dev.platform_data	= &rudolf_hid1_data,
+};
+
+
+/* hid descriptor for a keyboard */
+static struct hidg_func_descriptor rudolf_hid2_data = {
+	.subclass		= 0, /* Subclass NONE */
+	.protocol		= 0, /* Protocol NONE */
+	.report_length		= 0x40,
+	.report_desc_length	= 25,
+	.report_desc		= {
+
+		0x06, 0x00, 0xFF, // Usage page (vendor defined) 
+      		0x09, 0x01, // Usage ID (vendor defined) 
+      		0xA1, 0x01, // Collection (application) 
+
+    		// The Input report 
+        	// 0x09, 0x03,       // Usage ID - vendor defined 
+        	0x15, 0x00,       // Logical Minimum (0) 
+        	0x26, 0xFF, 0x00,   // Logical Maximum (255) 
+        	0x75, 0x08,       // Report Size (8 bits) 
+        	0x95, 0x40,       // Report Count (64 fields)
+ 
+		0x09, 0x01,	  // USAGE (vendor usage 1)
+        	0x81, 0x02,       // Input (Data, Variable, Absolute) 
+
+		0x09, 0x01,	  // USAGE (vendor usage 1)
+        	0x91, 0x02,       // Output (Data, Variable, Absolute) 
+
+      		0xc0		/* END_COLLECTION                         */
+		}
+};
+
+static struct platform_device rudolf_hid2 = {
+	.name			= "hidg",
+	.id			= 1,
+	.num_resources		= 0,
+	.resource		= 0,
+	.dev.platform_data	= &rudolf_hid2_data,
+};
+
+
+
+/* Bluetooth Slow clock init using ecap 2 */
+static __init void da850_evm_bt_slow_clock_init(void)						// LEGO BT
+{												// LEGO BT		
+  int PSC1;											// LEGO BT
+												// LEGO BT
+  PSC1 = __raw_readl(DA8XX_PSC1_VIRT(0x294 * 4));  // Old PSC1 is 32bit -> explains "* 4"	// LEGO BT
+  PSC1 |= 3;											// LEGO BT
+  __raw_writel(PSC1, DA8XX_PSC1_VIRT(0x294 * 4));						// LEGO BT
+												// LEGO BT
+  PSC1 = __raw_readl(DA8XX_PSC1_VIRT(0x48 * 4));						// LEGO BT
+  PSC1 |= 3;											// LEGO BT
+  __raw_writel(PSC1, DA8XX_PSC1_VIRT(0x48 * 4));						// LEGO BT
+
+  PSC1 = __raw_readl(DA8XX_SYSCFG1_VIRT(0x3 * 4));						// LEGO BT
+  PSC1 &= ~0x00000004;										// LEGO BT
+  __raw_writel(PSC1, DA8XX_SYSCFG1_VIRT(0x3 * 4));						// LEGO BT
+
+  __raw_writel(0,      DA8XX_ECAP2_VIRT(0 * 2));     // Old ECAP is 16bit -> explains "* 2"     // LEGO BT
+  __raw_writel(0,      DA8XX_ECAP2_VIRT(2 * 2));     //						// LEGO BT
+  __raw_writew(0x0690, DA8XX_ECAP2_VIRT(0x15 * 2));  // Setup					// LEGO BT
+  __raw_writel(2014,   DA8XX_ECAP2_VIRT(0x06 * 2));  // Duty					// LEGO BT
+  __raw_writel(4028,   DA8XX_ECAP2_VIRT(0x04 * 2));  // Freq					// LEGO BT
+
+}
+
+
 
 static struct musb_hdrc_platform_data usb_evm_data[] = {
 	{
@@ -996,6 +1290,9 @@ static __init void da850_evm_usb_init(void)
 	__raw_writel(cfgchip2, DA8XX_SYSCFG0_VIRT(DA8XX_CFGCHIP2_REG));
 
 	da8xx_usb20_configure(usb_evm_data, ARRAY_SIZE(usb_evm_data));
+
+	platform_device_register(&rudolf_hid1);
+	platform_device_register(&rudolf_hid2);
 
 	ret = da8xx_pinmux_setup(da850_evm_usb11_pins);
 	if (ret) {
@@ -1047,21 +1344,21 @@ static int __init da850_evm_config_pru_can(void)
     if (!machine_is_davinci_da850_evm())
         return 0;
 
-	ret = da8xx_pinmux_setup(da850_pru_can_pins);
-	if (ret)
-        pr_warning("da850_evm_init: da850_pru_can_pins mux setup failed: %d\n",
-                ret);
-
-	ret = gpio_request(DA850_PRU_CAN_TRX_PIN, "pru_can_en");
-    if (ret)
-         pr_warning("Cannot open GPIO %d\n", DA850_PRU_CAN_TRX_PIN);
+//	ret = da8xx_pinmux_setup(da850_pru_can_pins);
+//	if (ret)
+//        pr_warning("da850_evm_init: da850_pru_can_pins mux setup failed: %d\n",
+//                ret);
+//
+//	ret = gpio_request(DA850_PRU_CAN_TRX_PIN, "pru_can_en");
+//   if (ret) 
+//         pr_warning("Cannot open GPIO %d\n", DA850_PRU_CAN_TRX_PIN);
 
 	/* value = 0 to enable the can transceiver */
-    gpio_direction_output(DA850_PRU_CAN_TRX_PIN, 0);
-    ret = da8xx_register_pru_can();
-    if (ret)
-        pr_warning("da850_evm_init: pru can registration failed: %d\n", ret);
-    return ret;
+//    gpio_direction_output(DA850_PRU_CAN_TRX_PIN, 0);
+//    ret = da8xx_register_pru_can();
+//    if (ret)
+//        pr_warning("da850_evm_init: pru can registration failed: %d\n", ret);
+//    return ret;
 }
 device_initcall(da850_evm_config_pru_can);
 
@@ -1069,6 +1366,7 @@ static int __init da850_evm_config_pru_suart(void)
 {
     int ret;
 
+     pr_info("da850_evm_config_pru_suart configuration\n");
     if (!machine_is_davinci_da850_evm())
         return 0;
 
@@ -1084,22 +1382,103 @@ static int __init da850_evm_config_pru_suart(void)
 }
 device_initcall(da850_evm_config_pru_suart);
 
+/*
+ * The following EDMA channels/slots are not being used by drivers (for
+ * example: Timer, GPIO, UART events etc) on da850/omap-l138 EVM, hence
+ * they are being reserved for codecs on the DSP side.
+ */
+static const s16 da850_dma0_rsv_chans[][2] = {
+        /* (offset, number) */
+        { 8,  6},
+        {24,  4},
+        {30,  2},
+        {-1, -1}
+};
+
+static const s16 da850_dma0_rsv_slots[][2] = {
+        /* (offset, number) */
+        { 8,  6},
+        {24,  4},
+        {30, 50},
+        {-1, -1}
+};
+
+static const s16 da850_dma1_rsv_chans[][2] = {
+        /* (offset, number) */
+        { 0, 28},
+        {30,  2},
+        {-1, -1}
+};
+
+static const s16 da850_dma1_rsv_slots[][2] = {
+        /* (offset, number) */
+        { 0, 28},
+        {30, 90},
+        {-1, -1}
+};
+
+static struct edma_rsv_info da850_edma_cc0_rsv = {
+        .rsv_chans      = da850_dma0_rsv_chans,
+        .rsv_slots      = da850_dma0_rsv_slots,
+};
+
+static struct edma_rsv_info da850_edma_cc1_rsv = {
+        .rsv_chans      = da850_dma1_rsv_chans,
+        .rsv_slots      = da850_dma1_rsv_slots,
+};
+
+static struct edma_rsv_info *da850_edma_rsv[2] = {
+        &da850_edma_cc0_rsv,
+        &da850_edma_cc1_rsv,
+};
+
+static const short da850_lms2012_lcd_pins[] = {
+	DA850_GPIO2_11, DA850_GPIO2_12, DA850_GPIO5_0,
+	-1
+};
+
+
 static __init void da850_evm_init(void)
 {
 	int ret;
 
-	ret = da8xx_register_edma();
+	//ret = da8xx_register_edma();
+	ret = da850_register_edma(da850_edma_rsv);
 	if (ret)
 		pr_warning("da850_evm_init: edma registration failed: %d\n",
 				ret);
+
+	ret = da8xx_pinmux_setup(da850_spi0_pins);
+	if (ret)
+		pr_warning("da850_evm_init: spi0 mux setup failed: %d\n",
+				ret);
+
+	ret = da8xx_pinmux_setup(da850_spi1_pins);
+	if (ret)
+		pr_warning("da850_evm_init: spi0 mux setup failed: %d\n",
+				ret);
+
+	ret = da8xx_pinmux_setup(da850_lms2012_lcd_pins);
+	if (ret)
+		pr_warning("da850_evm_init: lms2012 lcd mux setup failed: %d\n",
+				ret);
+
+
+
+	//da850_init_spi0(BIT(0), da850_spi0_board_info,
+	da850_init_spi(da850_spi_board_info,
+			ARRAY_SIZE(da850_spi_board_info));
 
 	ret = da8xx_pinmux_setup(da850_i2c0_pins);
 	if (ret)
 		pr_warning("da850_evm_init: i2c0 mux setup failed: %d\n",
 				ret);
-
-	platform_device_register(&da850_gpio_i2c);
-
+        
+  i2c_register_board_info(1, da850_evm_i2c_devices,
+			ARRAY_SIZE(da850_evm_i2c_devices));
+	da8xx_register_i2c(0,&lego_i2c_0_pdata);
+//	platform_device_register(&da850_gpio_i2c);
+	
 	ret = da8xx_register_watchdog();
 	if (ret)
 		pr_warning("da830_evm_init: watchdog registration failed: %d\n",
@@ -1117,11 +1496,11 @@ static __init void da850_evm_init(void)
 					DA850_MMCSD_CD_PIN);
 		gpio_direction_input(DA850_MMCSD_CD_PIN);
 
-		ret = gpio_request(DA850_MMCSD_WP_PIN, "MMC WP\n");
-		if (ret)
-			pr_warning("da850_evm_init: can not open GPIO %d\n",
-					DA850_MMCSD_WP_PIN);
-		gpio_direction_input(DA850_MMCSD_WP_PIN);
+//		ret = gpio_request(DA850_MMCSD_WP_PIN, "MMC WP\n");
+//		if (ret)
+//			pr_warning("da850_evm_init: can not open GPIO %d\n",
+//					DA850_MMCSD_WP_PIN);
+//		gpio_direction_input(DA850_MMCSD_WP_PIN);
 
 		ret = da8xx_register_mmcsd0(&da850_mmc_config);
 		if (ret)
@@ -1129,20 +1508,52 @@ static __init void da850_evm_init(void)
 					" %d\n", ret);
 	}
 
+//ret = da8xx_pinmux_setup(da850_uart0_pins);
+//      if (ret)
+//            pr_warning("da850_evm_init: uart0 mux setup failed: %d\n", ret);
+
+//      ret = da8xx_pinmux_setup(da850_uart1_pins);
+//      if (ret)
+//            pr_warning("da850_evm_init: uart1 mux setup failed: %d\n", ret);
+
+	/* Support for UART 1 */
+	ret = da8xx_pinmux_setup(da850_uart1_pins);
+	if (ret)
+		pr_warning("da850_evm_init: UART 1 mux setup failed:"
+						" %d\n", ret);
+
+	/* Support for UART 2 */						// LEGO BT
+	ret = da8xx_pinmux_setup(da850_uart2_pins);				// LEGO BT
+	if (ret)								// LEGO BT
+		pr_warning("da850_evm_init: UART 2 mux setup failed:"		// LEGO BT
+						" %d\n", ret);			// LEGO BT
+
+
+	pr_info("da850_evm_gpio_req_BT_EN\n");	
+	
+	ret = gpio_request(DA850_BT_EN, "WL1271_BT_EN");
+	if (ret)
+		pr_warning("da850_evm_init: can not open BT GPIO %d\n",
+					DA850_BT_EN);
+	gpio_direction_output(DA850_BT_EN, 1);
+	udelay(1000);
+	gpio_direction_output(DA850_BT_EN, 0);
+
+
 	davinci_serial_init(&da850_evm_uart_config);
 
-	i2c_register_board_info(1, da850_evm_i2c_devices,
-			ARRAY_SIZE(da850_evm_i2c_devices));
+	//i2c_register_board_info(1, da850_evm_i2c_devices,
+	//		ARRAY_SIZE(da850_evm_i2c_devices));
 
 	/*
 	 * shut down uart 0 and 1; they are not used on the board and
 	 * accessing them causes endless "too much work in irq53" messages
 	 * with arago fs
 	 */
-	__raw_writel(0, IO_ADDRESS(DA8XX_UART1_BASE) + 0x30);
-	__raw_writel(0, IO_ADDRESS(DA8XX_UART0_BASE) + 0x30);
+	//__raw_writel(0, IO_ADDRESS(DA8XX_UART1_BASE) + 0x30);
+	//__raw_writel(0, IO_ADDRESS(DA8XX_UART0_BASE) + 0x30);
 
-	if (HAS_MCBSP0) {
+/*	if (HAS_MCBSP0) {
 		if (HAS_EMAC)
 			pr_warning("WARNING: both MCBSP0 and EMAC are "
 				"enabled, but they share pins.\n"
@@ -1175,15 +1586,15 @@ static __init void da850_evm_init(void)
 		if ((HAS_MCBSP0 || HAS_MCBSP1))
 			pr_warning("WARNING: both McASP and McBSP are enabled, "
 					"but they share pins.\n"
-					"\tDisable one of them.\n");
+					"\tDisable one of them.\n");*/
 
-		ret = da8xx_pinmux_setup(da850_mcasp_pins);
-		if (ret)
-			pr_warning("da850_evm_init: mcasp mux setup failed:"
-					"%d\n", ret);
+//		ret = da8xx_pinmux_setup(da850_mcasp_pins);
+//		if (ret)
+//			pr_warning("da850_evm_init: mcasp mux setup failed:"
+//					"%d\n", ret);
 
-		da8xx_register_mcasp(0, &da850_evm_snd_data);
-	}
+//		da8xx_register_mcasp(0, &da850_evm_snd_data);
+	//}
 
 	ret = da8xx_pinmux_setup(da850_lcdcntl_pins);
 	if (ret)
@@ -1226,13 +1637,13 @@ static __init void da850_evm_init(void)
 		pr_warning("da850_evm_init: suspend registration failed: %d\n",
 				ret);
 
-	ret = da8xx_pinmux_setup(da850_spi1_pins);
-	if (ret)
-		pr_warning("da850_evm_init: spi1 mux setup failed: %d\n",
-				ret);
-
-	da850_init_spi1(BIT(0), da850_spi_board_info,
-			ARRAY_SIZE(da850_spi_board_info));
+//	ret = da8xx_pinmux_setup(da850_spi1_pins);
+//	if (ret)
+//		pr_warning("da850_evm_init: spi1 mux setup failed: %d\n",
+//				ret);
+//
+//	da850_init_spi1(BIT(0), da850_spi_board_info,
+//			ARRAY_SIZE(da850_spi_board_info));
 
 	da850_evm_usb_init();
 
@@ -1273,12 +1684,54 @@ static __init void da850_evm_init(void)
 					"%d\n",	ret);
 
 	}
+
+
+	if (gpio_request(DA850_BT_SHUT_DOWN, "bt_en")) {			// LEGO BT
+		printk(KERN_ERR "Failed to request gpio DA850_BT_SHUT_DOWN\n");	// LEGO BT
+		return;								// LEGO BT
+	}									// LEGO BT
+
+	if (gpio_request(DA850_BT_SHUT_DOWN_EP2, "bt_en_EP2")) {		// LEGO BT - EP2
+		printk(KERN_ERR "Failed to request gpio DA850_BT_SHUT_DOWN\n");	// LEGO BT - EP2
+		return;								// LEGO BT - EP2
+	}									// LEGO BT - EP2
+
+	gpio_set_value(DA850_BT_SHUT_DOWN_EP2, 0);				// LEGO BT - EP2
+	gpio_direction_output(DA850_BT_SHUT_DOWN_EP2, 0);			// LEGO BT - EP2
+
+	gpio_set_value(DA850_BT_SHUT_DOWN, 0);					// LEGO BT
+	gpio_direction_output(DA850_BT_SHUT_DOWN, 0);				// LEGO BT
+
+	/* Support for Bluetooth shut dw pin */					// LEGO BT
+	pr_info("Support for Bluetooth shut dw pin\n");	
+	ret = da8xx_pinmux_setup(da850_bt_shut_down_pin);			// LEGO BT
+	if (ret)								// LEGO BT
+		pr_warning("da850_evm_init: BT shut down mux setup failed:"	// LEGO BT
+						" %d\n", ret);			// LEGO BT
+
+
+	gpio_set_value(DA850_BT_SHUT_DOWN, 0);					// LEGO BT
+	gpio_set_value(DA850_BT_SHUT_DOWN_EP2, 0);				// LEGO BT - EP2
+
+        /* Support for Bluetooth slow clock */					// LEGO BT
+	ret = da8xx_pinmux_setup(da850_bt_slow_clock_pin);			// LEGO BT
+	if (ret)								// LEGO BT
+		pr_warning("da850_evm_init: BT slow clock mux setup failed:"	// LEGO BT
+						" %d\n", ret);			// LEGO BT
+
+        da850_evm_bt_slow_clock_init();						// LEGO BT
+        gpio_direction_input(DA850_ECAP2_OUT_ENABLE);				// LEGO BT
+
+	gpio_set_value(DA850_BT_SHUT_DOWN, 1);					// LEGO BT
+	gpio_set_value(DA850_BT_SHUT_DOWN_EP2, 1);				// LEGO BT - EP2
+
+
 }
 
 #ifdef CONFIG_SERIAL_8250_CONSOLE
 static int __init da850_evm_console_init(void)
 {
-	return add_preferred_console("ttyS", 2, "115200");
+	return add_preferred_console("ttyS", 1, "115200"); //Nico
 }
 console_initcall(da850_evm_console_init);
 #endif
@@ -1295,7 +1748,7 @@ static void __init da850_evm_map_io(void)
 {
 	da850_init();
 }
-
+/*
 MACHINE_START(DAVINCI_DA850_EVM, "DaVinci DA850/OMAP-L138/AM18xx EVM")
 	.phys_io	= IO_PHYS,
 	.io_pg_offst	= (__IO_ADDRESS(IO_PHYS) >> 18) & 0xfffc,
@@ -1304,4 +1757,15 @@ MACHINE_START(DAVINCI_DA850_EVM, "DaVinci DA850/OMAP-L138/AM18xx EVM")
 	.init_irq	= da850_evm_irq_init,
 	.timer		= &davinci_timer,
 	.init_machine	= da850_evm_init,
+MACHINE_END
+*/
+// LEGO CHANGED - 20120501
+MACHINE_START(DAVINCI_DA850_EVM, "MindStorms EV3")
+        .phys_io        = IO_PHYS,
+        .io_pg_offst    = (__IO_ADDRESS(IO_PHYS) >> 18) & 0xfffc,
+        .boot_params    = (DA8XX_DDR_BASE + 0x100),
+        .map_io         = da850_evm_map_io,
+        .init_irq       = da850_evm_irq_init,
+        .timer          = &davinci_timer,
+        .init_machine   = da850_evm_init,
 MACHINE_END

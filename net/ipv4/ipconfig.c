@@ -86,14 +86,15 @@
 #endif
 
 /* Define the friendly delay before and after opening net devices */
-#define CONF_PRE_OPEN		500	/* Before opening: 1/2 second */
+#define CONF_PRE_OPEN		2500	/* Before opening: 2 1/2 second */
 #define CONF_POST_OPEN		1	/* After opening: 1 second */
 
 /* Define the timeout for waiting for a DHCP/BOOTP/RARP reply */
 #define CONF_OPEN_RETRIES 	2	/* (Re)open devices twice */
 #define CONF_SEND_RETRIES 	6	/* Send six requests per open */
 #define CONF_INTER_TIMEOUT	(HZ/2)	/* Inter-device timeout: 1/2 second */
-#define CONF_BASE_TIMEOUT	(HZ*2)	/* Initial timeout: 2 seconds */
+//#define CONF_BASE_TIMEOUT	(HZ*2)	/* Initial timeout: 2 seconds */
+#define CONF_BASE_TIMEOUT	(HZ*4)	/* Initial timeout: 4 seconds */
 #define CONF_TIMEOUT_RANDOM	(HZ)	/* Maximum amount of randomization */
 #define CONF_TIMEOUT_MULT	*7/4	/* Rate of timeout growth */
 #define CONF_TIMEOUT_MAX	(HZ*30)	/* Maximum allowed timeout */
@@ -1326,15 +1327,20 @@ static int __init ip_auto_config(void)
  try_try_again:
 #endif
 	/* Give hardware a chance to settle */
-	msleep(CONF_PRE_OPEN);
+// LEGO - CHANGED 20120830
+	if (root_server_addr != NONE)
+	  msleep(CONF_PRE_OPEN);
+// LEGO - CHANGE END
 
 	/* Setup all network devices */
 	if (ic_open_devs() < 0)
 		return -1;
 
 	/* Give drivers a chance to settle */
-	ssleep(CONF_POST_OPEN);
-
+// LEGO - CHANGED 20120830
+	if (root_server_addr != NONE)
+	  ssleep(CONF_POST_OPEN);
+// LEGO - CHANGE END
 	/*
 	 * If the config information is insufficient (e.g., our IP address or
 	 * IP address of the boot server is missing or we have multiple network

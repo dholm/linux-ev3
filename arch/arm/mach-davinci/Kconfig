@@ -260,6 +260,15 @@ config DAVINCI_MCBSP1
 	depends on DAVINCI_MCBSP
 	default n
 
+
+config DAVINCI_C_FIQ 
+       bool "FIQ ISR support in C" 
+       depends on ARCH_DAVINCI 
+       select FIQ 
+       help 
+         Support for Davinci FIQ support in C -- see 
+         ./arch/arm/mach-davinci/davinci-fiq.c 
+
 endmenu
 
 endif

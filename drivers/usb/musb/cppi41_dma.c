@@ -623,6 +623,8 @@ static void cppi41_set_ep_size(struct cppi41_channel *rx_ch, u32 pkt_size)
 	void *__iomem reg_base = cppi->musb->ctrl_base;
 	u8 ep_num = rx_ch->ch_num + 1;
 
+	if (pkt_size % 64)					// Lego patch
+		pkt_size = pkt_size + 64 - (pkt_size % 64); 	// Lego patch
 	musb_writel(reg_base, USB_GENERIC_RNDIS_EP_SIZE_REG(ep_num), pkt_size);
 }
 
@@ -710,11 +712,14 @@ static unsigned cppi41_next_rx_segment(struct cppi41_channel *rx_ch)
 #ifdef CONFIG_USB_GADGET_MUSB_HDRC
 		gadget_driver = cppi->musb->gadget_driver;
 #endif
-		if (!strcmp(gadget_driver->driver.name, "g_ether")) {
-			cppi41_mode_update(rx_ch, USB_GENERIC_RNDIS_MODE);
-		} else {
+//		if (!strcmp(gadget_driver->driver.name, "g_ether")) {		//PSP13
+//			cppi41_mode_update(rx_ch, USB_GENERIC_RNDIS_MODE);	//PSP13
+//		} else {							//PSP13
+		if (!strcmp(gadget_driver->driver.name, "g_ether")) {		//Lego Patch
 			max_rx_transfer_size = 512;
 			cppi41_mode_update(rx_ch, USB_TRANSPARENT_MODE);
+		} else {							//lego patch
+			cppi41_mode_update(rx_ch, USB_GENERIC_RNDIS_MODE);	//Lego patch
 		}
 		pkt_len = 0;
 		if (rx_ch->length < max_rx_transfer_size)

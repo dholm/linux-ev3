@@ -25,6 +25,7 @@
 #include <mach/usb.h>
 #include <mach/pm.h>
 #include <mach/mcbsp.h>
+#include <mach/spi.h>
 #include <mach/vpif.h>
 #include <mach/cputype.h>
 
@@ -32,6 +33,10 @@
 
 extern void __iomem *da8xx_syscfg0_base;
 extern void __iomem *da8xx_syscfg1_base;
+
+
+extern void __iomem *da8xx_psc1_base; 		// LEGO BT slow clock
+extern void __iomem *da8xx_ecap2_base; 		// LEGO BT slow clock
 
 /*
  * The cp_intc interrupt controller for the da8xx isn't in the same
@@ -55,7 +60,12 @@ extern void __iomem *da8xx_syscfg1_base;
 
 #define DA8XX_SYSCFG1_BASE	(IO_PHYS + 0x22C000)
 #define DA8XX_SYSCFG1_VIRT(x)	(da8xx_syscfg1_base + (x))
+#define DA8XX_PSC1_VIRT(x)	(da8xx_psc1_base + (x))       // LEGO BT Slow clock
+#define DA8XX_ECAP2_VIRT(x)	(da8xx_ecap2_base + (x))      // LEGO BT Slow clock
+
+
 #define DA8XX_DEEPSLEEP_REG	0x8
+
 
 #define DA8XX_PSC0_BASE		0x01c10000
 #define DA8XX_PLL0_BASE		0x01c11000
@@ -75,6 +85,8 @@ extern void __iomem *da8xx_syscfg1_base;
 #define DA8XX_USB0_BASE		0x01e00000
 #define DA850_SATA_BASE		0x01E18000
 #define DA850_SATA_CLK_PWRDN	0x01E2C018
+#define DA8XX_ECAP2_BASE        0x01F08000	// LEGO BT Slow clock
+
 
 #define PINMUX0			0x00
 #define PINMUX1			0x04
@@ -135,7 +147,7 @@ static inline int cpu_is_davinci_da8xx_arm_only(void)
 void __init da830_init(void);
 void __init da850_init(void);
 
-int da8xx_register_edma(void);
+int da850_register_edma(struct edma_rsv_info *rsv[2]);
 int da8xx_register_i2c(int instance, struct davinci_i2c_platform_data *pdata);
 int da8xx_register_watchdog(void);
 int da8xx_register_usb20(unsigned mA, unsigned potpgt);
@@ -151,10 +163,14 @@ int da850_register_cpufreq(void);
 int da8xx_register_cpuidle(void);
 void __iomem * __init da8xx_get_mem_ctlr(void);
 int da850_register_pm(struct platform_device *pdev);
-void da850_init_spi1(unsigned chipselect_mask,
-	struct spi_board_info *info, unsigned len);
-void da830_init_spi0(unsigned chipselect_mask,
-	struct spi_board_info *info, unsigned len);
+//void da850_init_spi0(unsigned chipselect_mask,
+//	struct spi_board_info *info, unsigned len);
+//void da850_init_spi1(unsigned chipselect_mask,
+//	struct spi_board_info *info, unsigned len);
+//void da830_init_spi0(unsigned chipselect_mask,
+//	struct spi_board_info *info, unsigned len);
+int da8xx_register_spi(int instance, struct davinci_spi_platform_data *pdata);
+void da830_init_spi0(struct spi_board_info *info, unsigned len);
 int da850_init_mcbsp(struct davinci_mcbsp_platform_data *pdata);
 int __init da850_register_vpif(void);
 int __init da850_register_vpif_display(struct vpif_display_config
@@ -163,7 +179,7 @@ int __init da850_register_vpif_capture(struct vpif_capture_config
 							*capture_config);
 
 int cppi41_init(void);
-int da8xx_register_sata(void);
+int __init da8xx_register_sata(void);
 
 
 extern struct platform_device da8xx_serial_device;
@@ -212,6 +228,7 @@ extern const short da850_lcdcntl_pins[];
 extern const short da850_mmcsd0_pins[];
 extern const short da850_nand_pins[];
 extern const short da850_nor_pins[];
+extern const short da850_spi0_pins[];
 extern const short da850_spi1_pins[];
 extern const short da850_mcbsp0_pins[];
 extern const short da850_mcbsp1_pins[];
@@ -219,6 +236,10 @@ extern const short da850_vpif_capture_pins[];
 extern const short da850_vpif_display_pins[];
 extern const short da850_evm_usb11_pins[];
 extern const short da850_sata_pins[];
+
+extern const short da850_bt_shut_down_pin[];   // LEGO BT
+extern const short da850_bt_slow_clock_pin[];  // LEGO BT
+
 
 #ifdef CONFIG_DAVINCI_MUX
 int da8xx_pinmux_setup(const short pins[]);

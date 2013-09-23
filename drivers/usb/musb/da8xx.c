@@ -504,12 +504,13 @@ static irqreturn_t da8xx_interrupt(int irq, void *hci)
 	spin_unlock_irqrestore(&musb->lock, flags);
 
 	if (ret != IRQ_HANDLED) {
-		if (status)
+		if (status){
 			/*
 			 * We sometimes get unhandled IRQs in the peripheral
 			 * mode from EP0 and SOF...
 			 */
-			ERR("Unhandled USB IRQ %08x\n", status);
+//			ERR("Unhandled USB IRQ %08x\n", status);    //LEGO - removed to avoid printout on sensorport when connecting/disconn. usb 
+    }
 		else if (printk_ratelimit())
 			/*
 			 * We've seen series of spurious interrupts in the

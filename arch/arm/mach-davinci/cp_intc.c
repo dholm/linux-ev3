@@ -27,7 +27,7 @@ static inline void cp_intc_write(unsigned long value, unsigned offset)
 	__raw_writel(value, cp_intc_base + offset);
 }
 
-static void cp_intc_ack_irq(unsigned int irq)
+void cp_intc_ack_irq(unsigned int irq)
 {
 	cp_intc_write(irq, CP_INTC_SYS_STAT_IDX_CLR);
 }
@@ -144,7 +144,7 @@ void __init cp_intc_init(void __iomem *base, unsigned short num_irq,
 				if (k < num_irq)
 					val |= irq_prio[k] << 24;
 			}
-
+			// printk("[0x%08X] = 0x%08X\n", CP_INTC_CHAN_MAP(i), val);
 			cp_intc_write(val, CP_INTC_CHAN_MAP(i));
 		}
 	} else	{
@@ -167,3 +167,32 @@ void __init cp_intc_init(void __iomem *base, unsigned short num_irq,
 	/* Enable global interrupt */
 	cp_intc_write(1, CP_INTC_GLOBAL_ENABLE);
 }
+
+
+void cp_intc_set_channel(unsigned int channel, unsigned int irq)
+{
+  unsigned int index  = (channel >> 2);
+  unsigned int offset = (channel & 0x03) << 3; 
+  unsigned int val;
+
+  val  = cp_intc_read(CP_INTC_CHAN_MAP(index));
+  val &= ~(0xFF << offset);
+  val |= channel << offset;
+
+  cp_intc_write(val, CP_INTC_CHAN_MAP(index));
+}
+
+void cp_intc_fiq_enable(bool enable, unsigned int irq)
+{
+  if (enable)
+  {
+    cp_intc_write(0, CP_INTC_HOST_ENABLE_IDX_SET);
+    cp_intc_unmask_irq(irq);
+  }
+  else
+  {
+    cp_intc_mask_irq(irq);
+    cp_intc_write(0, CP_INTC_HOST_ENABLE_IDX_CLR);
+  }
+}
+

@@ -1064,13 +1064,16 @@ static struct fifo_cfg __initdata mode_1_cfg[] = {
 
 /* mode 2 - fits in 4KB */
 static struct fifo_cfg __initdata mode_2_cfg[] = {
-{ .hw_ep_num = 1, .style = FIFO_TX,   .maxpacket = 512, },
-{ .hw_ep_num = 1, .style = FIFO_RX,   .maxpacket = 512, },
-{ .hw_ep_num = 2, .style = FIFO_TX,   .maxpacket = 512, },
-{ .hw_ep_num = 2, .style = FIFO_RX,   .maxpacket = 512, },
-{ .hw_ep_num = 3, .style = FIFO_TX,   .maxpacket = 512, },
-{ .hw_ep_num = 3, .style = FIFO_RX,   .maxpacket = 1024,},
-{ .hw_ep_num = 4, .style = FIFO_RXTX, .maxpacket = 256, },
+{ .hw_ep_num = 1, .style = FIFO_TX,   .maxpacket = 1024, },
+{ .hw_ep_num = 1, .style = FIFO_RX,   .maxpacket = 1024, },
+//{ .hw_ep_num = 2, .style = FIFO_TX,   .maxpacket = 512, }, //PSP13
+//{ .hw_ep_num = 2, .style = FIFO_RX,   .maxpacket = 512, }, //PSP13
+//{ .hw_ep_num = 3, .style = FIFO_TX,   .maxpacket = 512, }, //PSP13
+{ .hw_ep_num = 2, .style = FIFO_TX,   .maxpacket = 64, }, //Lego patch
+{ .hw_ep_num = 2, .style = FIFO_RX,   .maxpacket = 64, }, //Lego patch
+{ .hw_ep_num = 3, .style = FIFO_TX,   .maxpacket = 1024, }, //Lego patch
+//{ .hw_ep_num = 4, .style = FIFO_RXTX, .maxpacket = 256, }, //PSP13
+{ .hw_ep_num = 4, .style = FIFO_RXTX, .maxpacket = 128, }, //Lego patch
 };
 
 /* mode 3 - fits in 4KB */

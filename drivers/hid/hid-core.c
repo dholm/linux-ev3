@@ -1186,8 +1186,8 @@ int hid_connect(struct hid_device *hdev, unsigned int connect_mask)
 		hdev->claimed |= HID_CLAIMED_HIDRAW;
 
 	if (!hdev->claimed) {
-		dev_err(&hdev->dev, "claimed by neither input, hiddev nor "
-				"hidraw\n");
+//		dev_err(&hdev->dev, "claimed by neither input, hiddev nor "   //LEGO - removed to avoid printout on sensorport when connecting daisy device on USB 
+//				"hidraw\n");
 		return -ENODEV;
 	}
 
