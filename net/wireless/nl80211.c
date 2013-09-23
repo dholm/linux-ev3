@@ -14,7 +14,9 @@
 #include <linux/rtnetlink.h>
 #include <linux/netlink.h>
 #include <linux/etherdevice.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
 #include <net/net_namespace.h>
+#endif
 #include <net/genetlink.h>
 #include <net/cfg80211.h>
 #include <net/sock.h>
