@@ -11,7 +11,11 @@
 #include <linux/kref.h>
 #include <linux/rbtree.h>
 #include <linux/debugfs.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,31))
 #include <linux/rfkill.h>
+#else
+#include <linux/rfkill_backport.h>
+#endif
 #include <linux/workqueue.h>
 #include <net/genetlink.h>
 #include <net/cfg80211.h>

@@ -17,7 +17,11 @@
 #include <linux/slab.h>
 #include <linux/workqueue.h>
 #include <linux/init.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,31))
 #include <linux/rfkill.h>
+#else
+#include <linux/rfkill_backport.h>
+#endif
 #include <linux/sched.h>
 
 #include "rfkill.h"
@@ -229,7 +233,7 @@ static int rfkill_connect(struct input_handler *handler, struct input_dev *dev,
 
 	handle->dev = dev;
 	handle->handler = handler;
-	handle->name = "rfkill";
+	handle->name = "rfkill_backport";
 
 	/* causes rfkill_start() to be called */
 	error = input_register_handle(handle);

@@ -20,6 +20,7 @@
  */
 
 #include <linux/types.h>
+#include <linux/compat-2.6.h>
 
 /* define userspace visible states */
 #define RFKILL_STATE_SOFT_BLOCKED	0
@@ -148,7 +149,7 @@ struct rfkill_ops {
 	int	(*set_block)(void *data, bool blocked);
 };
 
-#if defined(CONFIG_RFKILL) || defined(CONFIG_RFKILL_MODULE)
+#if defined(CONFIG_RFKILL_BACKPORT) || defined(CONFIG_RFKILL_BACKPORT_MODULE)
 /**
  * rfkill_alloc - allocate rfkill structure
  * @name: name of the struct -- the string is not copied internally
@@ -355,7 +356,7 @@ static inline bool rfkill_blocked(struct rfkill *rfkill)
 #endif /* RFKILL || RFKILL_MODULE */
 
 
-#ifdef CONFIG_RFKILL_LEDS
+#ifdef CONFIG_RFKILL_BACKPORT_LEDS
 /**
  * rfkill_get_led_trigger_name - Get the LED trigger name for the button's LED.
  * This function might return a NULL pointer if registering of the
