@@ -197,6 +197,33 @@ static void __devexit	ath5k_pci_remove(struct pci_dev *pdev);
 #ifdef CONFIG_PM
 static int		ath5k_pci_suspend(struct device *dev);
 static int		ath5k_pci_resume(struct device *dev);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29))
+static int ath5k_pci_suspend_compat(struct pci_dev *pdev, pm_message_t state)
+{
+	int r;
+
+	r = ath5k_pci_suspend(&pdev->dev);
+	if (r)
+		return r;
+
+	pci_save_state(pdev);
+	pci_disable_device(pdev);
+	pci_set_power_state(pdev, PCI_D3hot);
+	return 0;
+}
+
+static int ath5k_pci_resume_compat(struct pci_dev *pdev)
+{
+	int r;
+
+	pci_restore_state(pdev);
+	r = pci_enable_device(pdev);
+	if (r)
+		return r;
+
+	return ath5k_pci_resume(&pdev->dev);
+}
+#endif
 
 SIMPLE_DEV_PM_OPS(ath5k_pm_ops, ath5k_pci_suspend, ath5k_pci_resume);
 #define ATH5K_PM_OPS	(&ath5k_pm_ops)
@@ -209,7 +236,12 @@ static struct pci_driver ath5k_pci_driver = {
 	.id_table	= ath5k_pci_id_table,
 	.probe		= ath5k_pci_probe,
 	.remove		= __devexit_p(ath5k_pci_remove),
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 	.driver.pm	= ATH5K_PM_OPS,
+#elif defined(CONFIG_PM)
+	.suspend        = ath5k_pci_suspend_compat,
+	.resume         = ath5k_pci_resume_compat,
+#endif
 };
 
 
