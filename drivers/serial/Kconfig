@@ -1490,4 +1490,6 @@ config SERIAL_GRLIB_GAISLER_APBUART_CONSOLE
 	help
 	Support for running a console on the GRLIB APBUART
 
+source "drivers/serial/omapl_pru/Kconfig"
+
 endmenu

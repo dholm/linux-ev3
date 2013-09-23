@@ -64,6 +64,7 @@ config CAN_BFIN
 	  module will be called bfin_can.
 
 source "drivers/net/can/mscan/Kconfig"
+source "drivers/net/can/omapl_pru/Kconfig"
 
 source "drivers/net/can/sja1000/Kconfig"
 
