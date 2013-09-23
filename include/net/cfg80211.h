@@ -23,6 +23,7 @@
 /* remove once we remove the wext stuff */
 #include <net/iw_handler.h>
 #include <linux/wireless.h>
+#include <linux/compat-2.6.h>
 
 
 /*

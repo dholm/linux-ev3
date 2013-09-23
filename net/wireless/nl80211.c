@@ -14,7 +14,9 @@
 #include <linux/rtnetlink.h>
 #include <linux/netlink.h>
 #include <linux/etherdevice.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
 #include <net/net_namespace.h>
+#endif
 #include <net/genetlink.h>
 #include <net/cfg80211.h>
 #include <net/sock.h>
@@ -29,7 +31,9 @@ static struct genl_family nl80211_fam = {
 	.hdrsize = 0,		/* no private header */
 	.version = 1,		/* no particular meaning now */
 	.maxattr = NL80211_ATTR_MAX,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32))
 	.netnsok = true,
+#endif
 };
 
 /* internal helper: get rdev and dev */
@@ -4221,7 +4225,9 @@ static int nl80211_wiphy_netns(struct sk_buff *skb, struct genl_info *info)
 
 	err = cfg80211_switch_netns(rdev, net);
  out_put_net:
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
 	put_net(net);
+#endif
  out:
 	cfg80211_unlock_rdev(rdev);
  out_rtnl:

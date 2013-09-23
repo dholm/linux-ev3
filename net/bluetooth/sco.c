@@ -430,8 +430,12 @@ static struct sock *sco_sock_alloc(struct net *net, struct socket *sock, int pro
 	return sk;
 }
 
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,32))
 static int sco_sock_create(struct net *net, struct socket *sock, int protocol,
 			   int kern)
+#else
+static int sco_sock_create(struct net *net, struct socket *sock, int protocol)
+#endif
 {
 	struct sock *sk;
 
@@ -645,7 +649,11 @@ static int sco_sock_sendmsg(struct kiocb *iocb, struct socket *sock,
 	return err;
 }
 
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,31))
 static int sco_sock_setsockopt(struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen)
+#else
+static int sco_sock_setsockopt(struct socket *sock, int level, int optname, char __user *optval, int optlen)
+#endif
 {
 	struct sock *sk = sock->sk;
 	int err = 0;

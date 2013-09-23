@@ -2439,6 +2439,7 @@ static void atl1c_shutdown(struct pci_dev *pdev)
 	atl1c_suspend(pdev, PMSG_SUSPEND);
 }
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 static const struct net_device_ops atl1c_netdev_ops = {
 	.ndo_open		= atl1c_open,
 	.ndo_stop		= atl1c_close,
@@ -2455,6 +2456,7 @@ static const struct net_device_ops atl1c_netdev_ops = {
 	.ndo_poll_controller	= atl1c_netpoll,
 #endif
 };
+#endif
 
 static int atl1c_init_netdev(struct net_device *netdev, struct pci_dev *pdev)
 {
@@ -2462,7 +2464,18 @@ static int atl1c_init_netdev(struct net_device *netdev, struct pci_dev *pdev)
 	pci_set_drvdata(pdev, netdev);
 
 	netdev->irq  = pdev->irq;
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 	netdev->netdev_ops = &atl1c_netdev_ops;
+#else
+	netdev->change_mtu = atl1c_change_mtu;
+	netdev->hard_start_xmit = atl1c_xmit_frame;
+	netdev->open = atl1c_open;
+	netdev->stop = atl1c_close;
+	netdev->tx_timeout = atl1c_tx_timeout;
+	netdev->set_mac_address = atl1c_set_mac_addr;
+	netdev->do_ioctl = atl1c_ioctl;
+	netdev->get_stats = atl1c_get_stats;
+#endif
 	netdev->watchdog_timeo = AT_TX_WATCHDOG;
 	atl1c_set_ethtool_ops(netdev);
 

@@ -1052,7 +1052,9 @@ static struct usb_driver p54u_driver = {
 	.resume = p54u_resume,
 	.reset_resume = p54u_resume,
 #endif /* CONFIG_PM */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27))
 	.soft_unbind = 1,
+#endif
 };
 
 static int __init p54u_init(void)

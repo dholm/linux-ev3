@@ -11635,6 +11635,7 @@ static netdev_tx_t ipw_prom_hard_start_xmit(struct sk_buff *skb,
 	return NETDEV_TX_OK;
 }
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 static const struct net_device_ops ipw_prom_netdev_ops = {
 	.ndo_open 		= ipw_prom_open,
 	.ndo_stop		= ipw_prom_stop,
@@ -11643,6 +11644,7 @@ static const struct net_device_ops ipw_prom_netdev_ops = {
 	.ndo_set_mac_address 	= eth_mac_addr,
 	.ndo_validate_addr	= eth_validate_addr,
 };
+#endif
 
 static int ipw_prom_alloc(struct ipw_priv *priv)
 {
@@ -11663,7 +11665,13 @@ static int ipw_prom_alloc(struct ipw_priv *priv)
 	memcpy(priv->prom_net_dev->dev_addr, priv->mac_addr, ETH_ALEN);
 
 	priv->prom_net_dev->type = ARPHRD_IEEE80211_RADIOTAP;
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 	priv->prom_net_dev->netdev_ops = &ipw_prom_netdev_ops;
+#else
+	priv->prom_net_dev->open = ipw_prom_open;
+	priv->prom_net_dev->stop = ipw_prom_stop;
+	priv->prom_net_dev->hard_start_xmit = ipw_prom_hard_start_xmit;
+#endif
 
 	priv->prom_priv->ieee->iw_mode = IW_MODE_MONITOR;
 	SET_NETDEV_DEV(priv->prom_net_dev, &priv->pci_dev->dev);
@@ -11691,6 +11699,7 @@ static void ipw_prom_free(struct ipw_priv *priv)
 
 #endif
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 static const struct net_device_ops ipw_netdev_ops = {
 	.ndo_init		= ipw_net_init,
 	.ndo_open		= ipw_net_open,
@@ -11701,6 +11710,7 @@ static const struct net_device_ops ipw_netdev_ops = {
 	.ndo_change_mtu		= libipw_change_mtu,
 	.ndo_validate_addr	= eth_validate_addr,
 };
+#endif
 
 static int __devinit ipw_pci_probe(struct pci_dev *pdev,
 				   const struct pci_device_id *ent)
@@ -11802,7 +11812,15 @@ static int __devinit ipw_pci_probe(struct pci_dev *pdev,
 	priv->ieee->perfect_rssi = -20;
 	priv->ieee->worst_rssi = -85;
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 	net_dev->netdev_ops = &ipw_netdev_ops;
+#else
+	net_dev->open = ipw_net_open;
+	net_dev->stop = ipw_net_stop;
+	net_dev->init = ipw_net_init;
+	net_dev->set_multicast_list = ipw_net_set_multicast_list;
+	net_dev->set_mac_address = ipw_net_set_mac_address;
+#endif
 	priv->wireless_data.spy_data = &priv->ieee->spy_data;
 	net_dev->wireless_data = &priv->wireless_data;
 	net_dev->wireless_handlers = &ipw_wx_handler_def;

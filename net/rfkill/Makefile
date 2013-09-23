@@ -2,6 +2,6 @@
 # Makefile for the RF switch subsystem.
 #
 
-rfkill-y			+= core.o
-rfkill-$(CONFIG_RFKILL_INPUT)	+= input.o
-obj-$(CONFIG_RFKILL)		+= rfkill.o
+rfkill_backport-y			+= core.o
+rfkill_backport-$(CONFIG_RFKILL_BACKPORT_INPUT)	+= input.o
+obj-$(CONFIG_RFKILL_BACKPORT)		+= rfkill_backport.o

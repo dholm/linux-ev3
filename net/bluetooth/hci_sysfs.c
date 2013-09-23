@@ -68,7 +68,11 @@ static struct attribute_group bt_link_group = {
 	.attrs = bt_link_attrs,
 };
 
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,31))
 static const struct attribute_group *bt_link_groups[] = {
+#else
+static struct attribute_group *bt_link_groups[] = {
+#endif
 	&bt_link_group,
 	NULL
 };
@@ -126,7 +130,11 @@ static void del_conn(struct work_struct *work)
 		dev = device_find_child(&conn->dev, NULL, __match_tty);
 		if (!dev)
 			break;
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,29))
 		device_move(dev, NULL, DPM_ORDER_DEV_LAST);
+#else
+		device_move(dev, NULL);
+#endif
 		put_device(dev);
 	}
 
@@ -392,7 +400,11 @@ static struct attribute_group bt_host_group = {
 	.attrs = bt_host_attrs,
 };
 
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,31))
 static const struct attribute_group *bt_host_groups[] = {
+#else
+static struct attribute_group *bt_host_groups[] = {
+#endif
 	&bt_host_group,
 	NULL
 };

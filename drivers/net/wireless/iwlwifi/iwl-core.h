@@ -63,7 +63,11 @@
 #ifndef __iwl_core_h__
 #define __iwl_core_h__
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33))
 #include <generated/utsrelease.h>
+#else
+#include <linux/utsrelease.h>
+#endif
 
 /************************
  * forward declarations *

@@ -88,7 +88,11 @@ static void ath_pci_bt_coex_prep(struct ath_common *common)
 	struct pci_dev *pdev = to_pci_dev(sc->dev);
 	u8 aspm;
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
 	if (!pdev->is_pcie)
+#else
+	if (!compat_is_pcie(pdev))
+#endif
 		return;
 
 	pci_read_config_byte(pdev, ATH_PCIE_CAP_LINK_CTRL, &aspm);

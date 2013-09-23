@@ -18,7 +18,9 @@
 #include <linux/etherdevice.h>
 #include <linux/bitmap.h>
 #include <linux/rcupdate.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
 #include <net/net_namespace.h>
+#endif
 #include <net/ieee80211_radiotap.h>
 #include <net/cfg80211.h>
 #include <net/mac80211.h>
