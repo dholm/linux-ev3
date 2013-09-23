@@ -39,12 +39,7 @@
 #include <linux/skbuff.h>
 #include <linux/interrupt.h>
 #include <linux/notifier.h>
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,31))
 #include <linux/rfkill.h>
-#else
-#include <linux/rfkill_backport.h>
-#endif
-
 #include <net/sock.h>
 
 #include <asm/system.h>

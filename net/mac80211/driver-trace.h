@@ -1,9 +1,7 @@
 #if !defined(__MAC80211_DRIVER_TRACE) || defined(TRACE_HEADER_MULTI_READ)
 #define __MAC80211_DRIVER_TRACE
 
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,27))
 #include <linux/tracepoint.h>
-#endif /* (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,27)) */
 #include <net/mac80211.h>
 #include "ieee80211_i.h"
 
@@ -696,6 +694,4 @@ TRACE_EVENT(drv_ampdu_action,
 #define TRACE_INCLUDE_PATH .
 #undef TRACE_INCLUDE_FILE
 #define TRACE_INCLUDE_FILE driver-trace
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30))
 #include <trace/define_trace.h>
-#endif /* (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30)) */

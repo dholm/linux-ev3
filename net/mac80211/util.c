@@ -21,9 +21,7 @@
 #include <linux/wireless.h>
 #include <linux/bitmap.h>
 #include <linux/crc32.h>
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
 #include <net/net_namespace.h>
-#endif
 #include <net/cfg80211.h>
 #include <net/rtnetlink.h>
 

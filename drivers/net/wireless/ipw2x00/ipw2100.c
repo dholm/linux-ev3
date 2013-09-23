@@ -6091,7 +6091,6 @@ static void ipw2100_rf_kill(struct work_struct *work)
 
 static void ipw2100_irq_tasklet(struct ipw2100_priv *priv);
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 static const struct net_device_ops ipw2100_netdev_ops = {
 	.ndo_open		= ipw2100_open,
 	.ndo_stop		= ipw2100_close,
@@ -6102,7 +6101,6 @@ static const struct net_device_ops ipw2100_netdev_ops = {
 	.ndo_set_mac_address	= ipw2100_set_address,
 	.ndo_validate_addr	= eth_validate_addr,
 };
-#endif
 
 /* Look into using netdev destructor to shutdown ieee80211? */
 
@@ -6128,23 +6126,10 @@ static struct net_device *ipw2100_alloc_device(struct pci_dev *pci_dev,
 	priv->ieee->perfect_rssi = -20;
 	priv->ieee->worst_rssi = -85;
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 	dev->netdev_ops = &ipw2100_netdev_ops;
-#else
-	dev->open = ipw2100_open;
-	dev->stop = ipw2100_close;
-	dev->init = ipw2100_net_init;
-	dev->tx_timeout = ipw2100_tx_timeout;
-	dev->set_mac_address = ipw2100_set_address;
-#endif
-
 	dev->ethtool_ops = &ipw2100_ethtool_ops;
 	dev->wireless_handlers = &ipw2100_wx_handler_def;
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,31))
 	priv->wireless_data.libipw = priv->ieee;
-#else
-	priv->wireless_data.ieee80211 = (struct ieee80211_device *) priv->ieee;
-#endif
 	dev->wireless_data = &priv->wireless_data;
 	dev->watchdog_timeo = 3 * HZ;
 	dev->irq = 0;

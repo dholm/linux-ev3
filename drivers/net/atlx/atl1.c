@@ -2878,7 +2878,6 @@ static void atl1_poll_controller(struct net_device *netdev)
 }
 #endif
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 static const struct net_device_ops atl1_netdev_ops = {
 	.ndo_open		= atl1_open,
 	.ndo_stop		= atl1_close,
@@ -2894,7 +2893,6 @@ static const struct net_device_ops atl1_netdev_ops = {
 	.ndo_poll_controller	= atl1_poll_controller,
 #endif
 };
-#endif
 
 /*
  * atl1_probe - Device Initialization Routine
@@ -2983,17 +2981,7 @@ static int __devinit atl1_probe(struct pci_dev *pdev,
 	adapter->mii.phy_id_mask = 0x1f;
 	adapter->mii.reg_num_mask = 0x1f;
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 	netdev->netdev_ops = &atl1_netdev_ops;
-#else
-	netdev->change_mtu = atl1_change_mtu;
-	netdev->hard_start_xmit = atl1_xmit_frame;
-	netdev->open = atl1_open;
-	netdev->stop = atl1_close;
-	netdev->tx_timeout = atlx_tx_timeout;
-	netdev->set_mac_address = atl1_set_mac;
-	netdev->do_ioctl = atlx_ioctl;
-#endif
 	netdev->watchdog_timeo = 5 * HZ;
 
 	netdev->ethtool_ops = &atl1_ethtool_ops;

@@ -274,7 +274,6 @@ response_error:
 	return -EDOM;
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 /* same as usbnet_netdev_ops but MTU change not allowed */
 static const struct net_device_ops rndis_netdev_ops = {
 	.ndo_open		= usbnet_open,
@@ -284,7 +283,6 @@ static const struct net_device_ops rndis_netdev_ops = {
 	.ndo_set_mac_address 	= eth_mac_addr,
 	.ndo_validate_addr	= eth_validate_addr,
 };
-#endif
 
 int
 generic_rndis_bind(struct usbnet *dev, struct usb_interface *intf, int flags)
@@ -347,11 +345,7 @@ generic_rndis_bind(struct usbnet *dev, struct usb_interface *intf, int flags)
 	dev->rx_urb_size &= ~(dev->maxpacket - 1);
 	u.init->max_transfer_size = cpu_to_le32(dev->rx_urb_size);
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 	net->netdev_ops = &rndis_netdev_ops;
-#else
-	net->change_mtu = NULL;
-#endif
 
 	retval = rndis_command(dev, u.header, CONTROL_BUFFER_SIZE);
 	if (unlikely(retval < 0)) {

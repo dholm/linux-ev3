@@ -5,9 +5,6 @@
 #include <linux/ieee80211.h>
 #include <linux/if_arp.h>
 #include <net/lib80211.h>
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29))
-#include <asm/unaligned.h>
-#endif
 
 #include "assoc.h"
 #include "decl.h"

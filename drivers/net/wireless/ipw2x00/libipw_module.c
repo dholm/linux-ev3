@@ -157,10 +157,6 @@ struct net_device *alloc_ieee80211(int sizeof_priv, int monitor)
 		goto failed;
 	}
 	ieee = netdev_priv(dev);
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,29))
-	dev->hard_start_xmit = libipw_xmit;
-	dev->change_mtu = libipw_change_mtu;
-#endif
 
 	ieee->dev = dev;
 

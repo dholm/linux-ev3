@@ -471,11 +471,7 @@ drop:
 	goto done;
 }
 
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,31))
 static int hci_sock_setsockopt(struct socket *sock, int level, int optname, char __user *optval, unsigned int len)
-#else
-static int hci_sock_setsockopt(struct socket *sock, int level, int optname, char __user *optval, int len)
-#endif
 {
 	struct hci_ufilter uf = { .opcode = 0 };
 	struct sock *sk = sock->sk;
@@ -630,12 +626,8 @@ static struct proto hci_sk_proto = {
 	.obj_size	= sizeof(struct hci_pinfo)
 };
 
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,32))
 static int hci_sock_create(struct net *net, struct socket *sock, int protocol,
 			   int kern)
-#else
-static int hci_sock_create(struct net *net, struct socket *sock, int protocol)
-#endif
 {
 	struct sock *sk;
 

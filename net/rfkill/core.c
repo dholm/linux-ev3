@@ -26,7 +26,7 @@
 #include <linux/capability.h>
 #include <linux/list.h>
 #include <linux/mutex.h>
-#include <linux/rfkill_backport.h>
+#include <linux/rfkill.h>
 #include <linux/sched.h>
 #include <linux/spinlock.h>
 #include <linux/miscdevice.h>
@@ -62,7 +62,7 @@ struct rfkill {
 	const struct rfkill_ops	*ops;
 	void			*data;
 
-#ifdef CONFIG_RFKILL_BACKPORT_LEDS
+#ifdef CONFIG_RFKILL_LEDS
 	struct led_trigger	led_trigger;
 	const char		*ledtrigname;
 #endif
@@ -123,7 +123,7 @@ static struct {
 static bool rfkill_epo_lock_active;
 
 
-#ifdef CONFIG_RFKILL_BACKPORT_LEDS
+#ifdef CONFIG_RFKILL_LEDS
 static void rfkill_led_trigger_event(struct rfkill *rfkill)
 {
 	struct led_trigger *trigger;
@@ -317,7 +317,7 @@ static void rfkill_set_block(struct rfkill *rfkill, bool blocked)
 	rfkill_event(rfkill);
 }
 
-#ifdef CONFIG_RFKILL_BACKPORT_INPUT
+#ifdef CONFIG_RFKILL_INPUT
 static atomic_t rfkill_input_disabled = ATOMIC_INIT(0);
 
 /**
@@ -779,7 +779,7 @@ static int rfkill_resume(struct device *dev)
 }
 
 static struct class rfkill_class = {
-	.name		= "rfkill_backport",
+	.name		= "rfkill",
 	.dev_release	= rfkill_release,
 	.dev_attrs	= rfkill_dev_attrs,
 	.dev_uevent	= rfkill_dev_uevent,
@@ -925,7 +925,7 @@ int __must_check rfkill_register(struct rfkill *rfkill)
 	if (!rfkill->persistent || rfkill_epo_lock_active) {
 		schedule_work(&rfkill->sync_work);
 	} else {
-#ifdef CONFIG_RFKILL_BACKPORT_INPUT
+#ifdef CONFIG_RFKILL_INPUT
 		bool soft_blocked = !!(rfkill->state & RFKILL_BLOCK_SW);
 
 		if (!atomic_read(&rfkill_input_disabled))
@@ -1153,7 +1153,7 @@ static int rfkill_fop_release(struct inode *inode, struct file *file)
 	list_for_each_entry_safe(ev, tmp, &data->events, list)
 		kfree(ev);
 
-#ifdef CONFIG_RFKILL_BACKPORT_INPUT
+#ifdef CONFIG_RFKILL_INPUT
 	if (data->input_handler)
 		if (atomic_dec_return(&rfkill_input_disabled) == 0)
 			printk(KERN_DEBUG "rfkill: input handler enabled\n");
@@ -1164,7 +1164,7 @@ static int rfkill_fop_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
-#ifdef CONFIG_RFKILL_BACKPORT_INPUT
+#ifdef CONFIG_RFKILL_INPUT
 static long rfkill_fop_ioctl(struct file *file, unsigned int cmd,
 			     unsigned long arg)
 {
@@ -1197,7 +1197,7 @@ static const struct file_operations rfkill_fops = {
 	.write		= rfkill_fop_write,
 	.poll		= rfkill_fop_poll,
 	.release	= rfkill_fop_release,
-#ifdef CONFIG_RFKILL_BACKPORT_INPUT
+#ifdef CONFIG_RFKILL_INPUT
 	.unlocked_ioctl	= rfkill_fop_ioctl,
 	.compat_ioctl	= rfkill_fop_ioctl,
 #endif
@@ -1227,7 +1227,7 @@ static int __init rfkill_init(void)
 		goto out;
 	}
 
-#ifdef CONFIG_RFKILL_BACKPORT_INPUT
+#ifdef CONFIG_RFKILL_INPUT
 	error = rfkill_handler_init();
 	if (error) {
 		misc_deregister(&rfkill_miscdev);
@@ -1243,7 +1243,7 @@ subsys_initcall(rfkill_init);
 
 static void __exit rfkill_exit(void)
 {
-#ifdef CONFIG_RFKILL_BACKPORT_INPUT
+#ifdef CONFIG_RFKILL_INPUT
 	rfkill_handler_exit();
 #endif
 	misc_deregister(&rfkill_miscdev);

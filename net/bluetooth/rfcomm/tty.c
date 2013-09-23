@@ -731,12 +731,8 @@ static int rfcomm_tty_open(struct tty_struct *tty, struct file *filp)
 	remove_wait_queue(&dev->wait, &wait);
 
 	if (err == 0)
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,29))
 		device_move(dev->tty_dev, rfcomm_get_device(dev),
 			    DPM_ORDER_DEV_AFTER_PARENT);
-#else
-		device_move(dev->tty_dev, rfcomm_get_device(dev));
-#endif
 
 	rfcomm_tty_copy_pending(dev);
 
@@ -756,11 +752,7 @@ static void rfcomm_tty_close(struct tty_struct *tty, struct file *filp)
 
 	if (atomic_dec_and_test(&dev->opened)) {
 		if (dev->tty_dev->parent)
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,29))
 			device_move(dev->tty_dev, NULL, DPM_ORDER_DEV_LAST);
-#else
-			device_move(dev->tty_dev, NULL);
-#endif
 
 		/* Close DLC and dettach TTY */
 		rfcomm_dlc_close(dev->dlc, 0);

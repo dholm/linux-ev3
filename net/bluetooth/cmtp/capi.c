@@ -382,11 +382,7 @@ static void cmtp_reset_ctr(struct capi_ctr *ctrl)
 
 	BT_DBG("ctrl %p", ctrl);
 
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30))
 	capi_ctr_down(ctrl);
-#else
-	capi_ctr_reseted(ctrl);
-#endif
 
 	atomic_inc(&session->terminate);
 	cmtp_schedule(session);

@@ -24,9 +24,6 @@
 #include <linux/irq.h>
 #include <linux/module.h>
 #include <linux/crc7.h>
-#if (LINUX_VERSION_CODE == KERNEL_VERSION(2,6,28))
-#include <linux/device.h>
-#endif
 #include <linux/spi/spi.h>
 #include <linux/spi/wl12xx.h>
 

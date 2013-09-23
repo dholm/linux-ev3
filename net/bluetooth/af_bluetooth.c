@@ -126,12 +126,8 @@ int bt_sock_unregister(int proto)
 }
 EXPORT_SYMBOL(bt_sock_unregister);
 
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,32))
 static int bt_sock_create(struct net *net, struct socket *sock, int proto,
 			  int kern)
-#else
-static int bt_sock_create(struct net *net, struct socket *sock, int proto)
-#endif
 {
 	int err;
 
@@ -149,11 +145,7 @@ static int bt_sock_create(struct net *net, struct socket *sock, int proto)
 	read_lock(&bt_proto_lock);
 
 	if (bt_proto[proto] && try_module_get(bt_proto[proto]->owner)) {
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,32))
 		err = bt_proto[proto]->create(net, sock, proto, kern);
-#else
-		err = bt_proto[proto]->create(net, sock, proto);
-#endif
 		bt_sock_reclassify_lock(sock, proto);
 		module_put(bt_proto[proto]->owner);
 	}
@@ -266,11 +258,7 @@ int bt_sock_recvmsg(struct kiocb *iocb, struct socket *sock,
 	skb_reset_transport_header(skb);
 	err = skb_copy_datagram_iovec(skb, 0, msg->msg_iov, copied);
 	if (err == 0)
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,32))
 		sock_recv_ts_and_drops(msg, sk, skb);
-#else
-	  sock_recv_timestamp(msg, sk, skb);
-#endif
 
 	skb_free_datagram(sk, skb);
 
@@ -350,11 +338,7 @@ int bt_sock_ioctl(struct socket *sock, unsigned int cmd, unsigned long arg)
 		if (sk->sk_state == BT_LISTEN)
 			return -EINVAL;
 
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,31))
 		amount = sk->sk_sndbuf - sk_wmem_alloc_get(sk);
-#else
-    amount = sk->sk_sndbuf - atomic_read(&sk->sk_wmem_alloc);
-#endif
 		if (amount < 0)
 			amount = 0;
 		err = put_user(amount, (int __user *) arg);

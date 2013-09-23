@@ -822,12 +822,8 @@ static struct sock *l2cap_sock_alloc(struct net *net, struct socket *sock, int p
 	return sk;
 }
 
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,32))
 static int l2cap_sock_create(struct net *net, struct socket *sock, int protocol,
 			     int kern)
-#else
-static int l2cap_sock_create(struct net *net, struct socket *sock, int protocol)
-#endif
 {
 	struct sock *sk;
 
@@ -839,11 +835,7 @@ static int l2cap_sock_create(struct net *net, struct socket *sock, int protocol)
 			sock->type != SOCK_DGRAM && sock->type != SOCK_RAW)
 		return -ESOCKTNOSUPPORT;
 
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,32))
 	if (sock->type == SOCK_RAW && !kern && !capable(CAP_NET_RAW))
-#else
-	if (sock->type == SOCK_RAW && !capable(CAP_NET_RAW))
-#endif
 		return -EPERM;
 
 	sock->ops = &l2cap_sock_ops;
@@ -1771,11 +1763,7 @@ static int l2cap_sock_setsockopt_old(struct socket *sock, int optname, char __us
 	return err;
 }
 
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,31))
 static int l2cap_sock_setsockopt(struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen)
-#else
-static int l2cap_sock_setsockopt(struct socket *sock, int level, int optname, char __user *optval, int optlen)
-#endif
 {
 	struct sock *sk = sock->sk;
 	struct bt_security sec;

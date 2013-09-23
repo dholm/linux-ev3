@@ -323,13 +323,8 @@ static struct sock *rfcomm_sock_alloc(struct net *net, struct socket *sock, int 
 	return sk;
 }
 
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,32))
 static int rfcomm_sock_create(struct net *net, struct socket *sock,
 			      int protocol, int kern)
-#else
-static int rfcomm_sock_create(struct net *net, struct socket *sock,
-			      int protocol)
-#endif
 {
 	struct sock *sk;
 
@@ -709,11 +704,7 @@ static int rfcomm_sock_recvmsg(struct kiocb *iocb, struct socket *sock,
 		copied += chunk;
 		size   -= chunk;
 
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,32))
 		sock_recv_ts_and_drops(msg, sk, skb);
-#else
-		sock_recv_timestamp(msg, sk, skb);
-#endif
 
 		if (!(flags & MSG_PEEK)) {
 			atomic_sub(chunk, &sk->sk_rmem_alloc);
@@ -776,11 +767,7 @@ static int rfcomm_sock_setsockopt_old(struct socket *sock, int optname, char __u
 	return err;
 }
 
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,31))
 static int rfcomm_sock_setsockopt(struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen)
-#else
-static int rfcomm_sock_setsockopt(struct socket *sock, int level, int optname, char __user *optval, int optlen)
-#endif
 {
 	struct sock *sk = sock->sk;
 	struct bt_security sec;

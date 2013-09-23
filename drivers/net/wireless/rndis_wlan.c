@@ -2670,7 +2670,6 @@ static int bcm4320b_early_init(struct usbnet *usbdev)
 	return 0;
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 /* same as rndis_netdev_ops but with local multicast handler */
 static const struct net_device_ops rndis_wlan_netdev_ops = {
 	.ndo_open		= usbnet_open,
@@ -2681,7 +2680,6 @@ static const struct net_device_ops rndis_wlan_netdev_ops = {
 	.ndo_validate_addr	= eth_validate_addr,
 	.ndo_set_multicast_list	= rndis_wlan_set_multicast_list,
 };
-#endif
 
 static int rndis_wlan_bind(struct usbnet *usbdev, struct usb_interface *intf)
 {
@@ -2729,11 +2727,7 @@ static int rndis_wlan_bind(struct usbnet *usbdev, struct usb_interface *intf)
 	 * rndis_host wants to avoid all OID as much as possible
 	 * so do promisc/multicast handling in rndis_wlan.
 	 */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 	usbdev->net->netdev_ops = &rndis_wlan_netdev_ops;
-#else
-	usbdev->net->set_multicast_list = rndis_wlan_set_multicast_list;
-#endif
 
 	tmp = RNDIS_PACKET_TYPE_DIRECTED | RNDIS_PACKET_TYPE_BROADCAST;
 	retval = rndis_set_oid(usbdev, OID_GEN_CURRENT_PACKET_FILTER, &tmp,

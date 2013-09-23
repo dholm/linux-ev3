@@ -644,7 +644,6 @@ static void ieee80211_teardown_sdata(struct net_device *dev)
 	WARN_ON(flushed);
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 static const struct net_device_ops ieee80211_dataif_ops = {
 	.ndo_open		= ieee80211_open,
 	.ndo_stop		= ieee80211_stop,
@@ -664,24 +663,11 @@ static const struct net_device_ops ieee80211_monitorif_ops = {
 	.ndo_change_mtu 	= ieee80211_change_mtu,
 	.ndo_set_mac_address 	= eth_mac_addr,
 };
-#endif
 
 static void ieee80211_if_setup(struct net_device *dev)
 {
 	ether_setup(dev);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 	dev->netdev_ops = &ieee80211_dataif_ops;
-#else
-	dev->hard_start_xmit = ieee80211_subif_start_xmit;
-	dev->set_multicast_list = ieee80211_set_multicast_list;
-	dev->change_mtu = ieee80211_change_mtu;
-	dev->open = ieee80211_open;
-	dev->stop = ieee80211_stop;
-	/* we will validate the address ourselves in ->open */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
-	dev->validate_addr = NULL;
-#endif
-#endif
 	dev->destructor = free_netdev;
 }
 
@@ -696,11 +682,7 @@ static void ieee80211_setup_sdata(struct ieee80211_sub_if_data *sdata,
 
 	/* and set some type-dependent values */
 	sdata->vif.type = type;
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 	sdata->dev->netdev_ops = &ieee80211_dataif_ops;
-#else
-	sdata->dev->hard_start_xmit = ieee80211_subif_start_xmit;
-#endif
 	sdata->wdev.iftype = type;
 
 	/* only monitor differs */
@@ -723,11 +705,7 @@ static void ieee80211_setup_sdata(struct ieee80211_sub_if_data *sdata,
 		break;
 	case NL80211_IFTYPE_MONITOR:
 		sdata->dev->type = ARPHRD_IEEE80211_RADIOTAP;
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 		sdata->dev->netdev_ops = &ieee80211_monitorif_ops;
-#else
-		sdata->dev->hard_start_xmit = ieee80211_monitor_start_xmit;
-#endif
 		sdata->u.mntr_flags = MONITOR_FLAG_CONTROL |
 				      MONITOR_FLAG_OTHER_BSS;
 		break;
@@ -796,8 +774,6 @@ int ieee80211_if_add(struct ieee80211_local *local, const char *name,
 		return -ENOMEM;
 	dev_net_set(ndev, wiphy_net(local->hw.wiphy));
 
-/* This is an optimization, just ignore for older kernels */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,26))
 	ndev->needed_headroom = local->tx_headroom +
 				4*6 /* four MAC addresses */
 				+ 2 + 2 + 2 + 2 /* ctl, dur, seq, qos */
@@ -806,7 +782,6 @@ int ieee80211_if_add(struct ieee80211_local *local, const char *name,
 				- ETH_HLEN /* ethernet hard_header_len */
 				+ IEEE80211_ENCRYPT_HEADROOM;
 	ndev->needed_tailroom = IEEE80211_ENCRYPT_TAILROOM;
-#endif
 
 	ret = dev_alloc_name(ndev, ndev->name);
 	if (ret < 0)
@@ -846,10 +821,6 @@ int ieee80211_if_add(struct ieee80211_local *local, const char *name,
 	if (ret)
 		goto fail;
 
-#if (LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,28))
-	ndev->uninit = ieee80211_teardown_sdata;
-#endif
-
 	if (ieee80211_vif_is_mesh(&sdata->vif) &&
 	    params && params->mesh_id_len)
 		ieee80211_sdata_set_mesh_id(sdata,
@@ -886,7 +857,6 @@ void ieee80211_if_remove(struct ieee80211_sub_if_data *sdata)
  * Remove all interfaces, may only be called at hardware unregistration
  * time because it doesn't do RCU-safe list removals.
  */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,33))
 void ieee80211_remove_interfaces(struct ieee80211_local *local)
 {
 	struct ieee80211_sub_if_data *sdata, *tmp;
@@ -903,22 +873,6 @@ void ieee80211_remove_interfaces(struct ieee80211_local *local)
 	mutex_unlock(&local->iflist_mtx);
 	unregister_netdevice_many(&unreg_list);
 }
-#else
-void ieee80211_remove_interfaces(struct ieee80211_local *local)
-{
-	struct ieee80211_sub_if_data *sdata, *tmp;
-
-	ASSERT_RTNL();
-
-	list_for_each_entry_safe(sdata, tmp, &local->interfaces, list) {
-		mutex_lock(&local->iflist_mtx);
-		list_del(&sdata->list);
-		mutex_unlock(&local->iflist_mtx);
-
-		unregister_netdevice(sdata->dev);
-	}
-}
-#endif
 
 static u32 ieee80211_idle_off(struct ieee80211_local *local,
 			      const char *reason)

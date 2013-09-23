@@ -277,13 +277,8 @@ static int hci_uart_tty_open(struct tty_struct *tty)
 	/* FIXME: why is this needed. Note don't use ldisc_ref here as the
 	   open path is before the ldisc is referencable */
 
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,30))
 	if (tty->ldisc->ops->flush_buffer)
 		tty->ldisc->ops->flush_buffer(tty);
-#else
-	if (tty->ldisc.ops->flush_buffer)
-		tty->ldisc.ops->flush_buffer(tty);
-#endif
 	tty_driver_flush_buffer(tty);
 
 	return 0;
@@ -483,11 +478,7 @@ static int hci_uart_tty_ioctl(struct tty_struct *tty, struct file * file,
 		return -EUNATCH;
 
 	default:
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,27))
 		err = n_tty_ioctl_helper(tty, file, cmd, arg);
-#else
-		err = n_tty_ioctl(tty, file, cmd, arg);
-#endif
 		break;
 	};
 

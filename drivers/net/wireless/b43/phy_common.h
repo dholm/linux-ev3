@@ -2,9 +2,6 @@
 #define LINUX_B43_PHY_COMMON_H_
 
 #include <linux/types.h>
-#if (LINUX_VERSION_CODE == KERNEL_VERSION(2,6,28))
-#include <asm/atomic.h>
-#endif
 
 struct b43_wldev;
 

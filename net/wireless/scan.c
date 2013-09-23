@@ -423,12 +423,7 @@ cfg80211_bss_update(struct cfg80211_registered_device *dev,
 			size_t used = dev->wiphy.bss_priv_size + sizeof(*res);
 			size_t ielen = res->pub.len_information_elements;
 
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,28)
-			if (0) {
-				used = 0; /* just to shut up the compiler */
-#else
 			if (!found->ies_allocated && ksize(found) >= used + ielen) {
-#endif
 				memcpy(found->pub.information_elements,
 				       res->pub.information_elements, ielen);
 				found->pub.len_information_elements = ielen;

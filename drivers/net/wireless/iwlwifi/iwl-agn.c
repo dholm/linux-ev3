@@ -3590,10 +3590,10 @@ static void __devexit iwl_pci_remove(struct pci_dev *pdev)
 
 /* Hardware specific file defines the PCI IDs table for that hardware module */
 static struct pci_device_id iwl_hw_card_ids[] = {
-#ifdef CONFIG_COMPAT_IWL4965
+#ifdef CONFIG_IWL4965
 	{IWL_PCI_DEVICE(0x4229, PCI_ANY_ID, iwl4965_agn_cfg)},
 	{IWL_PCI_DEVICE(0x4230, PCI_ANY_ID, iwl4965_agn_cfg)},
-#endif /* CONFIG_COMPAT_IWL4965 */
+#endif /* CONFIG_IWL4965 */
 #ifdef CONFIG_IWL5000
 /* 5100 Series WiFi */
 	{IWL_PCI_DEVICE(0x4232, 0x1201, iwl5100_agn_cfg)}, /* Mini Card */

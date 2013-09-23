@@ -9,9 +9,7 @@
 #include <linux/ieee80211.h>
 #include <linux/nl80211.h>
 #include <linux/rtnetlink.h>
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
 #include <net/net_namespace.h>
-#endif
 #include <linux/rcupdate.h>
 #include <net/cfg80211.h>
 #include "ieee80211_i.h"

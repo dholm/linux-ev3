@@ -912,7 +912,6 @@ static void lbs_free_adapter(struct lbs_private *priv)
 	lbs_deb_leave(LBS_DEB_MAIN);
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 static const struct net_device_ops lbs_netdev_ops = {
 	.ndo_open 		= lbs_dev_open,
 	.ndo_stop		= lbs_eth_stop,
@@ -923,7 +922,6 @@ static const struct net_device_ops lbs_netdev_ops = {
 	.ndo_change_mtu		= eth_change_mtu,
 	.ndo_validate_addr	= eth_validate_addr,
 };
-#endif
 
 /**
  * @brief This function adds the card. it will probe the
@@ -969,16 +967,7 @@ struct lbs_private *lbs_add_card(void *card, struct device *dmdev)
 	wdev->netdev = dev;
 	priv->dev = dev;
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
  	dev->netdev_ops = &lbs_netdev_ops;
-#else
-	dev->open = lbs_dev_open;
-	dev->hard_start_xmit = lbs_hard_start_xmit;
-	dev->stop = lbs_eth_stop;
-	dev->set_mac_address = lbs_set_mac_address;
-	dev->tx_timeout = lbs_tx_timeout;
-	dev->set_multicast_list = lbs_set_multicast_list;
-#endif
 	dev->watchdog_timeo = 5 * HZ;
 	dev->ethtool_ops = &lbs_ethtool_ops;
 #ifdef	WIRELESS_EXT
@@ -1274,13 +1263,11 @@ out:
 	lbs_deb_leave(LBS_DEB_MAIN);
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 static const struct net_device_ops rtap_netdev_ops = {
 	.ndo_open = lbs_rtap_open,
 	.ndo_stop = lbs_rtap_stop,
 	.ndo_start_xmit = lbs_rtap_hard_start_xmit,
 };
-#endif
 
 static int lbs_add_rtap(struct lbs_private *priv)
 {
@@ -1301,13 +1288,7 @@ static int lbs_add_rtap(struct lbs_private *priv)
 
 	memcpy(rtap_dev->dev_addr, priv->current_addr, ETH_ALEN);
 	rtap_dev->type = ARPHRD_IEEE80211_RADIOTAP;
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 	rtap_dev->netdev_ops = &rtap_netdev_ops;
-#else
-	rtap_dev->open = lbs_rtap_open;
-	rtap_dev->stop = lbs_rtap_stop;
-	rtap_dev->hard_start_xmit = lbs_rtap_hard_start_xmit;
-#endif
 	rtap_dev->ml_priv = priv;
 	SET_NETDEV_DEV(rtap_dev, priv->dev->dev.parent);
 
