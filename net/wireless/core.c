@@ -639,9 +639,11 @@ static void wdev_cleanup_work(struct work_struct *work)
 	dev_put(wdev->netdev);
 }
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32))
 static struct device_type wiphy_type = {
 	.name	= "wlan",
 };
+#endif
 
 static int cfg80211_netdev_notifier_call(struct notifier_block * nb,
 					 unsigned long state,
