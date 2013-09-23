@@ -228,6 +228,7 @@ int cfg80211_dev_rename(struct cfg80211_registered_device *rdev,
 	return 0;
 }
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
 int cfg80211_switch_netns(struct cfg80211_registered_device *rdev,
 			  struct net *net)
 {
@@ -263,6 +264,7 @@ int cfg80211_switch_netns(struct cfg80211_registered_device *rdev,
 
 	return err;
 }
+#endif
 
 static void cfg80211_rfkill_poll(struct rfkill *rfkill, void *data)
 {
@@ -375,7 +377,9 @@ struct wiphy *wiphy_new(const struct cfg80211_ops *ops, int sizeof_priv)
 	rdev->wiphy.flags |= WIPHY_FLAG_PS_ON_BY_DEFAULT;
 #endif
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
 	wiphy_net_set(&rdev->wiphy, &init_net);
+#endif
 
 	rdev->rfkill_ops.set_block = cfg80211_rfkill_set_block;
 	rdev->rfkill = rfkill_alloc(dev_name(&rdev->wiphy.dev),
@@ -671,8 +675,10 @@ static int cfg80211_netdev_notifier_call(struct notifier_block * nb,
 		mutex_lock(&rdev->devlist_mtx);
 		list_add(&wdev->list, &rdev->netdev_list);
 		rdev->devlist_generation++;
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
 		/* can only change netns with wiphy */
 		dev->features |= NETIF_F_NETNS_LOCAL;
+#endif
 
 		if (sysfs_create_link(&dev->dev.kobj, &rdev->wiphy.dev.kobj,
 				      "phy80211")) {
@@ -804,6 +810,7 @@ static struct notifier_block cfg80211_netdev_notifier = {
 	.notifier_call = cfg80211_netdev_notifier_call,
 };
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
 static void __net_exit cfg80211_pernet_exit(struct net *net)
 {
 	struct cfg80211_registered_device *rdev;
@@ -821,14 +828,17 @@ static void __net_exit cfg80211_pernet_exit(struct net *net)
 static struct pernet_operations cfg80211_pernet_ops = {
 	.exit = cfg80211_pernet_exit,
 };
+#endif
 
 static int __init cfg80211_init(void)
 {
 	int err;
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
 	err = register_pernet_device(&cfg80211_pernet_ops);
 	if (err)
 		goto out_fail_pernet;
+#endif
 
 	err = wiphy_sysfs_init();
 	if (err)
@@ -863,8 +873,10 @@ out_fail_nl80211:
 out_fail_notifier:
 	wiphy_sysfs_exit();
 out_fail_sysfs:
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
 	unregister_pernet_device(&cfg80211_pernet_ops);
 out_fail_pernet:
+#endif
 	return err;
 }
 subsys_initcall(cfg80211_init);
@@ -876,7 +888,9 @@ static void cfg80211_exit(void)
 	unregister_netdevice_notifier(&cfg80211_netdev_notifier);
 	wiphy_sysfs_exit();
 	regulatory_exit();
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
 	unregister_pernet_device(&cfg80211_pernet_ops);
+#endif
 	destroy_workqueue(cfg80211_wq);
 }
 module_exit(cfg80211_exit);

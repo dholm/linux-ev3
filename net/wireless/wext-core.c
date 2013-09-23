@@ -399,7 +399,11 @@ static void wireless_nlevent_process(unsigned long data)
 {
 	struct sk_buff *skb;
 	while ((skb = skb_dequeue(&wireless_nlevent_queue)))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,24))
 		rtnl_notify(skb, &init_net, 0, RTNLGRP_LINK, NULL, GFP_ATOMIC);
+#else
+		rtnl_notify(skb, 0, RTNLGRP_LINK, NULL, GFP_ATOMIC);
+#endif
 }
 
 static DECLARE_TASKLET(wireless_nlevent_tasklet, wireless_nlevent_process, 0);
