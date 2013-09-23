@@ -165,8 +165,12 @@ static inline int bnep_net_proto_filter(struct sk_buff *skb, struct bnep_session
 }
 #endif
 
-static netdev_tx_t bnep_net_xmit(struct sk_buff *skb,
-				 struct net_device *dev)
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,31))
+static netdev_tx_t bnep_net_xmit(struct sk_buff *skb, struct net_device *dev)
+#else
+static int bnep_net_xmit(struct sk_buff *skb, struct net_device *dev)
+#endif
+
 {
 	struct bnep_session *s = netdev_priv(dev);
 	struct sock *sk = s->sock->sk;
@@ -207,6 +211,7 @@ static netdev_tx_t bnep_net_xmit(struct sk_buff *skb,
 	return NETDEV_TX_OK;
 }
 
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,28))
 static const struct net_device_ops bnep_netdev_ops = {
 	.ndo_open            = bnep_net_open,
 	.ndo_stop            = bnep_net_close,
@@ -218,6 +223,16 @@ static const struct net_device_ops bnep_netdev_ops = {
 	.ndo_change_mtu	     = eth_change_mtu,
 
 };
+#else
+static struct net_device_stats *bnep_net_get_stats(struct net_device *dev)
+{
+	return &dev->stats;
+}
+static int bnep_net_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
+{
+	return -EINVAL;
+}
+#endif
 
 void bnep_net_setup(struct net_device *dev)
 {
@@ -226,7 +241,18 @@ void bnep_net_setup(struct net_device *dev)
 	dev->addr_len = ETH_ALEN;
 
 	ether_setup(dev);
+#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,28))
 	dev->netdev_ops = &bnep_netdev_ops;
+#else
+	dev->open            = bnep_net_open;
+	dev->stop            = bnep_net_close;
+	dev->hard_start_xmit = bnep_net_xmit;
+	dev->get_stats       = bnep_net_get_stats;
+	dev->do_ioctl        = bnep_net_ioctl;
+	dev->set_mac_address = bnep_net_set_mac_addr;
+	dev->set_multicast_list = bnep_net_set_mc_list;
+	dev->tx_timeout      = bnep_net_timeout;
+#endif
 
 	dev->watchdog_timeo  = HZ * 2;
 }

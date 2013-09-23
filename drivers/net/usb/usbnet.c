@@ -1260,6 +1260,7 @@ void usbnet_disconnect (struct usb_interface *intf)
 }
 EXPORT_SYMBOL_GPL(usbnet_disconnect);
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 static const struct net_device_ops usbnet_netdev_ops = {
 	.ndo_open		= usbnet_open,
 	.ndo_stop		= usbnet_stop,
@@ -1269,6 +1270,7 @@ static const struct net_device_ops usbnet_netdev_ops = {
 	.ndo_set_mac_address 	= eth_mac_addr,
 	.ndo_validate_addr	= eth_validate_addr,
 };
+#endif
 
 /*-------------------------------------------------------------------------*/
 
@@ -1348,7 +1350,15 @@ usbnet_probe (struct usb_interface *udev, const struct usb_device_id *prod)
 		net->features |= NETIF_F_HIGHDMA;
 #endif
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 	net->netdev_ops = &usbnet_netdev_ops;
+#else
+	net->change_mtu = usbnet_change_mtu;
+	net->hard_start_xmit = usbnet_start_xmit;
+	net->open = usbnet_open;
+	net->stop = usbnet_stop;
+	net->tx_timeout = usbnet_tx_timeout;
+#endif
 	net->watchdog_timeo = TX_TIMEOUT_JIFFIES;
 	net->ethtool_ops = &usbnet_ethtool_ops;
 

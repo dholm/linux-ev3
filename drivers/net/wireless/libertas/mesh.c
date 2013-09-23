@@ -319,6 +319,7 @@ static int lbs_mesh_dev_open(struct net_device *dev)
 	return ret;
 }
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 static const struct net_device_ops mesh_netdev_ops = {
 	.ndo_open		= lbs_mesh_dev_open,
 	.ndo_stop 		= lbs_mesh_stop,
@@ -326,6 +327,7 @@ static const struct net_device_ops mesh_netdev_ops = {
 	.ndo_set_mac_address	= lbs_set_mac_address,
 	.ndo_set_multicast_list = lbs_set_multicast_list,
 };
+#endif
 
 /**
  * @brief This function adds mshX interface
@@ -350,7 +352,15 @@ int lbs_add_mesh(struct lbs_private *priv)
 	mesh_dev->ml_priv = priv;
 	priv->mesh_dev = mesh_dev;
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 	mesh_dev->netdev_ops = &mesh_netdev_ops;
+#else
+	mesh_dev->open = lbs_mesh_dev_open;
+	mesh_dev->hard_start_xmit = lbs_hard_start_xmit;
+	mesh_dev->stop = lbs_mesh_stop;
+	mesh_dev->set_mac_address = lbs_set_mac_address;
+	mesh_dev->set_multicast_list = lbs_set_multicast_list;
+#endif
 	mesh_dev->ethtool_ops = &lbs_ethtool_ops;
 	memcpy(mesh_dev->dev_addr, priv->dev->dev_addr, ETH_ALEN);
 
